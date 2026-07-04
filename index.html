@@ -779,7 +779,7 @@ input[type=range]::-moz-range-thumb{
   <div class="sc"><div class="sc-lbl">Coast FIRE</div><div class="sc-val c-b" id="s-coast">—</div><div class="sc-sub" id="s-coast-sub">—</div></div>
   <div class="sc"><div class="sc-lbl">Regular FIRE (P50)</div><div class="sc-val c-p" id="s-regular">—</div><div class="sc-sub" id="s-regular-sub">—</div></div>
   <div class="sc"><div class="sc-lbl">P50 at Life Expectancy</div><div class="sc-val c-o" id="s-at65">—</div><div class="sc-sub" id="s-at65-sub">—</div></div>
-  <div class="sc"><div class="sc-lbl">Probability of Success</div><div class="sc-val" id="s-prob" style="color:var(--green)">—</div><div class="sc-sub" id="s-prob-sub">portfolio survives to life exp</div></div>
+  <div class="sc"><div class="sc-lbl">Probability of Success</div><div class="sc-val" id="s-prob" style="color:var(--green)">—</div><div class="sc-sub" id="s-prob-sub">portfolio never depletes in retirement</div></div>
   <div class="sc"><div class="sc-lbl" id="s-dzw-lbl">Die with Zero Budget</div><div class="sc-val c-o" id="s-dzw">—</div><div class="sc-sub" id="s-dzw-sub">toggle DWZ mode to activate</div></div>
 </div>
 
@@ -800,7 +800,7 @@ input[type=range]::-moz-range-thumb{
         <div class="li"><div class="lb" style="background:rgba(88,166,255,0.09)"></div><span>P10–P90</span></div>
         <div class="li"><div class="ll" style="background:rgba(88,166,255,0.4);border-top:2px dashed rgba(88,166,255,0.4)"></div><span>P10/P90 bounds</span></div>
         <div class="li"><div class="ll" style="background:#4caf50;border-top:2px dashed #4caf50"></div><span>— FIRE thresholds (Lean → Fat)</span></div>
-        <div class="li"><div class="ll" style="background:var(--orange)"></div><span>↘ Downshift Savings</span></div>
+        <div class="li"><div class="ll" style="background:var(--orange)"></div><span>↘ Sabbatical</span></div>
         <div class="li"><div class="ll" style="background:var(--green)"></div><span>↑ Windfall</span></div>
         <div class="li"><div class="ll" style="background:#bc8cff;border-top:2px dashed #bc8cff"></div><span>DWZ glide path</span></div>
         <div class="li"><div class="ll" style="background:rgba(139,148,158,0.6);border-top:2px dashed rgba(139,148,158,0.6)"></div><span>Saved scenario</span></div>
@@ -853,9 +853,8 @@ input[type=range]::-moz-range-thumb{
       <div class="panel">
         <div class="sec">Chart Layers<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:300px">
-          <div class="tr"><label>Include downshift savings in model</label><label class="tog"><input type="checkbox" id="tog-sab" checked><span class="ttrack"></span></label></div>
           <div class="tr"><label>Show FIRE threshold lines</label><label class="tog"><input type="checkbox" id="tog-fire" checked><span class="ttrack"></span></label></div>
-          <div class="tr"><label>Show downshift savings markers</label><label class="tog"><input type="checkbox" id="tog-marks" checked><span class="ttrack"></span></label></div>
+          <div class="tr"><label>Show sabbatical markers</label><label class="tog"><input type="checkbox" id="tog-marks" checked><span class="ttrack"></span></label></div>
           <div class="tr"><label>Show P10/P90 outer band</label><label class="tog"><input type="checkbox" id="tog-p90"><span class="ttrack"></span></label></div>
           <div class="tr"><label>Show P25/P75 inner band</label><label class="tog"><input type="checkbox" id="tog-p75" checked><span class="ttrack"></span></label></div>
         </div>
@@ -920,6 +919,9 @@ input[type=range]::-moz-range-thumb{
 
 <!-- Hidden baseline inputs — read by getP(); Phase 2 cards override these values -->
 <div style="display:none">
+  <!-- tog-sab gates only the legacy sabbaticals[] array (dead since Card G was
+       removed) — kept hidden so getP() keeps working; Card A events don't use it -->
+  <input type="checkbox" id="tog-sab" checked>
   <input type="checkbox" id="tog-ss">
   <div id="ss-wrap">
     <input type="range" id="sl-ssamt" min="0" max="60000" step="1000" value="0"><span id="v-ssamt">0</span>
@@ -1119,18 +1121,23 @@ function runSim(p) {
     const adj     = (p.yearlyAdjustments && p.yearlyAdjustments[year]) || {};
     const savMult = adj.savingsMult !== undefined ? adj.savingsMult : 1;
     const expMult = adj.expenseMult !== undefined ? adj.expenseMult : 1;
+    const age = p.currentAge + (year - 2026);
+    // SS/pension starts at claim age regardless of retirement status
+    const ss  = (p.ssOn  && age >= p.ssAge)  ? p.ssAmt  : 0;
+    const ss2 = (p.ss2On && age >= p.ss2Age) ? p.ss2Amt : 0;
+    // $-events (sabbatical / custom-$) replace the year's normal cashflow in
+    // any year, pre- or post-retirement; overlapping $-events were summed in
+    // p2ApplyOverrides and %-expense events (kids / custom-%) stack on top.
+    if (adj.cashflowOverride !== undefined)
+      return adj.cashflowOverride - p.expenses * (expMult - 1) + ss + ss2;
     if (year >= retireYr) {
-      const age = p.currentAge + (year - 2026);
       const mult = p.usePhases
         ? (age >= p.noGoAge ? p.noGoMult : age >= p.slowGoAge ? p.slowGoMult : 1)
         : 1;
-      const ss  = (p.ssOn  && age >= p.ssAge)  ? p.ssAmt  : 0;
-      const ss2 = (p.ss2On && age >= p.ss2Age) ? p.ss2Amt : 0;
       return -(p.expenses * mult * expMult - ss - ss2);
     }
-    if (adj.cashflowOverride !== undefined) return adj.cashflowOverride;
     if (p.includeSab) { const s=sabbaticals.find(s=>s.year===year); if(s) return -s.budget; }
-    return p.londonSave * savMult - p.expenses * (expMult - 1);
+    return p.londonSave * savMult - p.expenses * (expMult - 1) + ss + ss2;
   }
   function inh(year) {
     let v = 0;
@@ -1141,15 +1148,22 @@ function runSim(p) {
   }
 
   const sims = [];
+  const failed = [];
   for (let i=0; i<p.numSims; i++) {
     let pf = p.currentNW;
+    let broke = false;
     const t = [pf];
     for (let j=1; j<years.length; j++) {
       const z = p.shocks ? p.shocks[i][j-1] : undefined;
-      pf = Math.max(0, pf*(1+randN(p.ret,p.vol,z)) + cf(years[j]) + inh(years[j]));
+      const raw = pf*(1+randN(p.ret,p.vol,z)) + cf(years[j]) + inh(years[j]);
+      // Depleting during retirement is a permanent failure, even if a later
+      // windfall revives the balance — the retiree was broke in between.
+      if (raw <= 0 && years[j] >= retireYr) broke = true;
+      pf = Math.max(0, raw);
       t.push(pf);
     }
     sims.push(t);
+    failed.push(broke);
   }
 
   const p10=[],p25=[],p50=[],p75=[],p90=[];
@@ -1158,7 +1172,7 @@ function runSim(p) {
     p10.push(pct(v,10)); p25.push(pct(v,25)); p50.push(pct(v,50));
     p75.push(pct(v,75)); p90.push(pct(v,90));
   }
-  return { years, p10, p25, p50, p75, p90, sims };
+  return { years, p10, p25, p50, p75, p90, sims, failed };
 }
 
 // ── FIRE thresholds ────────────────────────────────────────────────────────────
@@ -1306,7 +1320,7 @@ function drawChart(sim, thr, opts) {
   // ── Sabbatical markers (from Phase 2 Card A events) ──
   if (showSabMarkers && p2State.active['A']) {
     p2State.events.filter(e => e.type === 'sabbatical' && e.enabled !== false).forEach(sab => {
-      const idx = years.indexOf(sab.startYear);
+      const idx = years.indexOf(Math.min(sab.startYear, sab.endYear !== undefined ? sab.endYear : sab.startYear));
       if (idx < 0) return;
       const x = xAt(idx);
       ctx.save();
@@ -1514,8 +1528,8 @@ function renderStats(p, thr, sim, extra) {
   probEl.textContent = Math.round(pct*100)+'%';
   probEl.style.color = pct>=0.9 ? 'var(--green)' : pct>=0.7 ? 'var(--yellow)' : 'var(--red)';
   document.getElementById('s-prob-sub').textContent = p.dzwOn
-    ? 'portfolio survives to life exp (DWZ on)'
-    : 'portfolio survives to life exp';
+    ? 'at planned spending — DWZ line is illustrative only'
+    : 'portfolio never depletes in retirement';
   // DWZ budget
   if (p.dzwOn && extra.dzwBudget > 0) {
     document.getElementById('s-dzw').textContent     = fmtS(extra.dzwBudget)+'/yr';
@@ -1632,11 +1646,8 @@ function refresh() {
     : pvRetire / nRetire;
   const dzwBudget = portfolioDraw + (p.ssOn ? p.ssAmt : 0) + (p.ss2On ? p.ss2Amt : 0);
 
-  // Probability of success
-  const probSuccess = sim.sims.filter(s => {
-    const i = lifeExpIdx >= 0 ? lifeExpIdx : s.length - 1;
-    return s[Math.min(i, s.length-1)] > 0;
-  }).length / sim.sims.length;
+  // Probability of success: path never depleted during retirement
+  const probSuccess = sim.failed.filter(f => !f).length / sim.failed.length;
   _lastProbSuccess = probSuccess;
 
   // DWZ glide path on chart (from retirement, depleting portfolio to $0)
@@ -1789,15 +1800,19 @@ function validatePhase1() {
   };
 }
 
+// Inflation assumption shared by the questionnaire snapshot sim, its levers,
+// and the slider default handed to the dashboard — keep these in lockstep.
+const Q_INFLATION = 2.5;
+
 function buildSimP(data, overrides={}, numSims=200) {
   return {
     currentNW:  data.currentNW,
-    ret:        (1 + data.nomRet/100) / (1 + 2.5/100) - 1,
+    ret:        (1 + data.nomRet/100) / (1 + Q_INFLATION/100) - 1,
     vol:        data.vol / 100,
     expenses:   data.expenses,
     swr:4, currentAge:data.currentAge, retireAge:data.retireAge, lifeExp:data.lifeExp,
     numSims, usePhases:false, ssOn:false, ssAmt:0, ssAge:67,
-    includeSab:false, londonSave:0,
+    includeSab:false, londonSave:data.annualSave || 0,
     dzwOn:false, inh1on:false, inh2on:false,
     inh1amt:0,inh1yr:2030,inh2amt:0,inh2yr:2040,
     slowGoAge:75,slowGoMult:0.8,noGoAge:85,noGoMult:0.65,
@@ -1808,10 +1823,7 @@ function buildSimP(data, overrides={}, numSims=200) {
 function simProb(data, overrides={}, n=500) {
   const p = buildSimP(data, overrides, n);
   const sim = runSim(p);
-  const leYr = 2026 + (p.lifeExp - p.currentAge);
-  const idx = sim.years.indexOf(leYr);
-  const i = idx>=0 ? idx : sim.years.length-1;
-  return sim.sims.filter(s => s[Math.min(i,s.length-1)] > 0).length / sim.sims.length;
+  return sim.failed.filter(f => !f).length / sim.failed.length;
 }
 
 function computeSummary(data) {
@@ -1832,18 +1844,20 @@ function computeSummary(data) {
   const leYr = 2026 + (data.lifeExp - data.currentAge);
   const leIdx = sim.years.indexOf(leYr);
   const i = leIdx>=0 ? leIdx : sim.years.length-1;
-  const prob = sim.sims.filter(s => s[Math.min(i,s.length-1)] > 0).length / sim.sims.length;
+  const prob = sim.failed.filter(f => !f).length / sim.failed.length;
   const yrs  = Math.max(0, data.retireAge - data.currentAge);
   const retYr = 2026 + yrs;
 
   const base = prob;
   const allLevers = [
-    {label:'Save 25% more',       desc:`+${fmtS(data.currentNW*0.25)} net worth`,           delta: simProb(data,{currentNW:data.currentNW*1.25, shocks},n) - base},
+    ...(data.annualSave > 0 ? [{label:'Save 25% more', desc:`+${fmtS(data.annualSave*0.25)}/yr in contributions`, delta: simProb(data,{londonSave:data.annualSave*1.25, shocks},n) - base}] : []),
     {label:'Spend 10% less',      desc:`${fmtS(data.expenses*0.9)}/yr in retirement`,        delta: simProb(data,{expenses:data.expenses*0.9, shocks},n)    - base},
-    ...(data.riskProfile !== 'Aggressive Growth' ? [{label:'More aggressive mix', desc:`${data.nomRet}% → ${(data.nomRet+1).toFixed(1)}% return`, delta: simProb(data,{ret:(1 + (data.nomRet+1)/100) / (1 + 2.5/100) - 1, shocks},n) - base}] : []),
-    {label:'Work 3 more years',   desc:`Retire at ${data.retireAge+3}`,                      delta: simProb(data,{retireAge:data.retireAge+3, shocks},n)    - base},
+    ...(data.riskProfile !== 'Aggressive Growth' ? [{label:'More aggressive mix', desc:`${data.nomRet}% → ${(data.nomRet+1).toFixed(1)}% return`, delta: simProb(data,{ret:(1 + (data.nomRet+1)/100) / (1 + Q_INFLATION/100) - 1, shocks},n) - base}] : []),
+    // Only offered when retiring 3 years later still leaves retirement years
+    // inside the simulated horizon — otherwise the lever measures nothing.
+    ...(data.retireAge + 3 < data.lifeExp ? [{label:'Work 3 more years', desc:`Retire at ${data.retireAge+3}`, delta: simProb(data,{retireAge:data.retireAge+3, shocks},n) - base}] : []),
   ];
-  const levers = allLevers.sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)).slice(0,3);
+  const levers = allLevers.sort((a,b)=>b.delta-a.delta).slice(0,3);
 
   const pct = Math.round(prob*100);
   const col  = pct>=85?'var(--green)':pct>=65?'var(--yellow)':'var(--red)';
@@ -1889,9 +1903,21 @@ function submitPhase1() {
   document.getElementById('q-overlay').scrollTop     = 0;
 }
 
+// Safe accessor for the questionnaire's saved answers: returns the parsed
+// object or null — malformed/missing localStorage must never throw here,
+// since these reads sit on the init path.
+function loadPhase1Data() {
+  try {
+    const d = JSON.parse(localStorage.getItem('phase1Data'));
+    return (d && typeof d === 'object') ? d : null;
+  } catch(e) { return null; }
+}
+
 function setSlider(id, value) {
   const el = document.getElementById(id);
-  if(!el) return;
+  // Non-numeric input (e.g. a legacy record missing a field) keeps the
+  // slider's current value instead of snapping the range to its midpoint
+  if(!el || !isFinite(+value)) return;
   el.value = Math.min(+el.max, Math.max(+el.min, +value));
   el.dispatchEvent(new Event('input'));
 }
@@ -1905,13 +1931,13 @@ function populateSliders(data) {
   setSlider('sl-lon',     data.annualSave || 0);
   setSlider('sl-ret',     data.nomRet);
   setSlider('sl-vol',     data.vol);
-  setSlider('sl-inf',     2.5);
+  setSlider('sl-inf',     Q_INFLATION);
   setSlider('sl-swr',     4.0);
 }
 
 function launchDashboard() {
-  const raw = localStorage.getItem('phase1Data');
-  if(raw) populateSliders(JSON.parse(raw));
+  const data = loadPhase1Data();
+  if(data) populateSliders(data);
   renderP2();
   refresh();
   document.getElementById('q-overlay').style.display = 'none';
@@ -1933,9 +1959,8 @@ function backToForm() {
 }
 
 function openPhase1() {
-  const raw = localStorage.getItem('phase1Data');
-  if(raw) {
-    const d = JSON.parse(raw);
+  const d = loadPhase1Data();
+  if(d) {
     document.getElementById('q-age').value    = d.currentAge;
     document.getElementById('q-retage').value = d.retireAge;
     document.getElementById('q-lifeexp').value= d.lifeExp;
@@ -1976,9 +2001,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('q-lifeexp').addEventListener('input', function(){ this.dataset.touched='1'; });
 
   // Check localStorage — skip questionnaire if already completed
-  const raw = localStorage.getItem('phase1Data');
-  if(raw) {
-    populateSliders(JSON.parse(raw));
+  const data = loadPhase1Data();
+  if(data) {
+    populateSliders(data);
     renderP2();
     refresh();
     document.getElementById('q-overlay').style.display = 'none';
@@ -2047,25 +2072,53 @@ let p2State = {
 };
 
 function loadP2State() {
+  // Accept only fields with the expected shape — corrupted or hand-edited
+  // localStorage must degrade to defaults, never poison the dashboard globals
+  // (getP()/renderP2() read p2State on every refresh).
+  const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
   try {
     const raw = localStorage.getItem('p2State');
     if (raw) {
       const saved = JSON.parse(raw);
-      Object.assign(p2State, saved);
+      if (isObj(saved)) {
+        if (isObj(saved.active)) p2State.active = saved.active;
+        if (isObj(saved.data)) {
+          p2State.data = {};
+          Object.keys(saved.data).forEach(k => { if (isObj(saved.data[k])) p2State.data[k] = saved.data[k]; });
+        }
+        if (Array.isArray(saved.events))
+          p2State.events = saved.events.filter(e => isObj(e) && typeof e.type === 'string');
+        if (typeof saved.expMult === 'number' && isFinite(saved.expMult)) p2State.expMult = saved.expMult;
+        if (typeof saved.country === 'string') p2State.country = saved.country;
+      }
       // Migrate old pct-based 'sabbatical' events (Downshift Savings) to 'downshift' type
-      if (p2State.events) {
-        p2State.events = p2State.events.map(e =>
-          (e.type === 'sabbatical' && e.budget === undefined) ? Object.assign({}, e, {type:'downshift'}) : e
-        );
+      p2State.events = p2State.events.map(e =>
+        (e.type === 'sabbatical' && e.budget === undefined) ? Object.assign({}, e, {type:'downshift'}) : e
+      );
+      // Sim cashflows start in 2027 (2026 is the starting-balance snapshot),
+      // so bump any stored 2026 years — they were silently inert before
+      p2State.events = p2State.events.map(e => Object.assign({}, e, {
+        startYear: Math.max(2027, e.startYear || 2027),
+        endYear:   e.endYear !== undefined ? Math.max(2027, e.endYear) : e.endYear,
+      }));
+      if (p2State.data['D']) {
+        if (Array.isArray(p2State.data['D'].windfalls))
+          p2State.data['D'].windfalls.forEach(w => { w.yr = Math.max(2027, w.yr || 2027); });
+        else
+          delete p2State.data['D'].windfalls;  // renderBodyD/p2ApplyOverrides expect array or absent
       }
     }
     const orderRaw = localStorage.getItem('phase2Order');
-    if (orderRaw) p2State.order = JSON.parse(orderRaw);
+    if (orderRaw) {
+      const ord = JSON.parse(orderRaw);
+      if (Array.isArray(ord)) p2State.order = ord.filter(id => typeof id === 'string');
+    }
   } catch(e) {}
-  if (!p2State.order) {
+  if (!Array.isArray(p2State.order) || !p2State.order.length) {
     p2State.order = P2_CARDS.map(c => c.id);
   } else {
-    // Add any new card IDs not yet in saved order
+    // Drop ids of removed cards, add any new card IDs not yet in saved order
+    p2State.order = p2State.order.filter(id => P2_CARDS.some(c => c.id === id));
     P2_CARDS.forEach(c => { if (!p2State.order.includes(c.id)) p2State.order.push(c.id); });
   }
 }
@@ -2127,19 +2180,23 @@ function p2ApplyOverrides(p) {
     const adj = {};
     const ensure = yr => { if (!adj[yr]) adj[yr] = {savingsMult:1, expenseMult:1}; };
     for (const evt of p2State.events) {
-      if (!evt.enabled) continue;
-      const pct = evt.pct / 100;
+      // Missing flag counts as enabled — must match the chart-marker filter
+      if (evt.enabled === false) continue;
+      const pct = (evt.pct || 0) / 100;  // missing pct = no-op, not NaN
+      // Tolerate reversed ranges from the two independent year sliders
+      const y0 = Math.min(evt.startYear, evt.endYear !== undefined ? evt.endYear : evt.startYear);
+      const y1 = Math.max(evt.startYear, evt.endYear !== undefined ? evt.endYear : evt.startYear);
       if (evt.type === 'downshift') {
-        for (let yr=evt.startYear; yr<=evt.endYear; yr++) { ensure(yr); adj[yr].savingsMult *= (1 - pct); }
+        for (let yr=y0; yr<=y1; yr++) { ensure(yr); adj[yr].savingsMult *= (1 - pct); }
       } else if (evt.type === 'sabbatical') {
-        for (let yr=evt.startYear; yr<=evt.endYear; yr++) { ensure(yr); adj[yr].cashflowOverride = -(evt.budget || 80000); }
+        for (let yr=y0; yr<=y1; yr++) { ensure(yr); adj[yr].cashflowOverride = (adj[yr].cashflowOverride || 0) - (evt.budget || 80000); }
       } else if (evt.type === 'raise') {
         const endYr = 2026 + (p.lifeExp - p.currentAge);
         for (let yr=evt.startYear; yr<=endYr; yr++) { ensure(yr); adj[yr].savingsMult *= (1 + pct); }
       } else if (evt.dollarMode) {
-        for (let yr=evt.startYear; yr<=evt.endYear; yr++) { ensure(yr); adj[yr].cashflowOverride = -(evt.budget || 0); }
+        for (let yr=y0; yr<=y1; yr++) { ensure(yr); adj[yr].cashflowOverride = (adj[yr].cashflowOverride || 0) - (evt.budget || 0); }
       } else {
-        for (let yr=evt.startYear; yr<=evt.endYear; yr++) { ensure(yr); adj[yr].expenseMult *= (1 + pct); }
+        for (let yr=y0; yr<=y1; yr++) { ensure(yr); adj[yr].expenseMult *= (1 + pct); }
       }
     }
     p.yearlyAdjustments = adj;
@@ -2164,10 +2221,10 @@ function renderBodyA() {
     const isRaise  = e.type === 'raise';
     const dollarMode = isCustom && e.dollarMode;
 
-    let pctLabel = 'Savings reduction (%)';
+    let pctLabel = 'Savings reduction (% of contributions)';
     if (isRaise)  pctLabel = 'Savings increase (% of current contributions)';
-    if (isKids)   pctLabel = 'Savings reduction (% — added expenses reduce savings)';
-    if (isCustom) pctLabel = 'Savings impact (% of expenses)';
+    if (isKids)   pctLabel = 'Added expenses (% of annual expenses)';
+    if (isCustom) pctLabel = 'Added expenses (% of annual expenses)';
 
     const kidsNote = isKids ? `<div style="font-size:10px;color:var(--mu2);margin-top:3px">Flat % added each year in range — not compounding.</div>` : '';
     const raiseNote = isRaise ? `<div style="font-size:10px;color:var(--mu2);margin-top:3px">Permanent savings boost from this year forward through retirement.</div>` : '';
@@ -2217,28 +2274,28 @@ function renderBodyA() {
       <div class="sg">
         <div class="sr"><span>Start year</span><strong><span id="p2a-sy-${i}">${e.startYear}</span></strong></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2026" max="2075" step="1" value="${e.startYear}" style="flex:1"
+          <input type="range" min="2027" max="2075" step="1" value="${e.startYear}" style="flex:1"
             oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-sy-${i}').textContent=this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2a-syn-${i}" min="2026" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2026,+this.value||2026));p2State.events[${i}].startYear=v;document.getElementById('p2a-sy-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2a-syn-${i}" min="2027" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;document.getElementById('p2a-sy-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>
       <div class="sg">
         <div class="sr"><span>End year</span><strong><span id="p2a-ey-${i}">${e.endYear}</span></strong></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2026" max="2075" step="1" value="${e.endYear}" style="flex:1"
+          <input type="range" min="2027" max="2075" step="1" value="${e.endYear}" style="flex:1"
             oninput="p2State.events[${i}].endYear=+this.value;document.getElementById('p2a-ey-${i}').textContent=this.value;document.getElementById('p2a-eyn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2a-eyn-${i}" min="2026" max="2075" step="1" value="${e.endYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2026,+this.value||2026));p2State.events[${i}].endYear=v;document.getElementById('p2a-ey-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2a-eyn-${i}" min="2027" max="2075" step="1" value="${e.endYear}" style="width:62px;${numStyle}"
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].endYear=v;document.getElementById('p2a-ey-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>` : `
       <div class="sg">
         <div class="sr"><span>Starting year</span><strong><span id="p2a-sy-${i}">${e.startYear}</span></strong></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2026" max="2075" step="1" value="${e.startYear}" style="flex:1"
+          <input type="range" min="2027" max="2075" step="1" value="${e.startYear}" style="flex:1"
             oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-sy-${i}').textContent=this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2a-syn-${i}" min="2026" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2026,+this.value||2026));p2State.events[${i}].startYear=v;document.getElementById('p2a-sy-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2a-syn-${i}" min="2027" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;document.getElementById('p2a-sy-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>`}
       ${customModeToggle}${lastControl}
@@ -2366,10 +2423,10 @@ function renderBodyD() {
       <div class="sg">
         <div class="sr"><span>Year received</span><strong><span id="p2d-yr-${i}-v">${w.yr}</span></strong></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2026" max="2075" step="1" value="${w.yr}" style="flex:1"
+          <input type="range" min="2027" max="2075" step="1" value="${w.yr}" style="flex:1"
             oninput="p2State.data['D'].windfalls[${i}].yr=+this.value;document.getElementById('p2d-yr-${i}-v').textContent=this.value;document.getElementById('p2d-yrn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2d-yrn-${i}" min="2026" max="2075" step="1" value="${w.yr}" style="width:62px;padding:3px 5px;font-size:11px;border:1px solid var(--bdr);border-radius:4px;background:var(--sur2);color:var(--txt);font-family:inherit"
-            oninput="const v=Math.min(2075,Math.max(2026,+this.value||2026));p2State.data['D'].windfalls[${i}].yr=v;document.getElementById('p2d-yr-${i}-v').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2d-yrn-${i}" min="2027" max="2075" step="1" value="${w.yr}" style="width:62px;padding:3px 5px;font-size:11px;border:1px solid var(--bdr);border-radius:4px;background:var(--sur2);color:var(--txt);font-family:inherit"
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.data['D'].windfalls[${i}].yr=v;document.getElementById('p2d-yr-${i}-v').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>
     </div>`).join('');
@@ -2418,6 +2475,7 @@ function renderBodyF() {
 
 function renderBodyH() {
   const cd = COUNTRY_DATA[p2State.country] || COUNTRY_DATA['US'];
+  const d  = p2HState();
   const currentLE  = +document.getElementById('sl-lifeexp').value;
   const currentInf = +document.getElementById('sl-inf').value;
   const currentExp = +document.getElementById('sl-exp').value;
@@ -2425,34 +2483,41 @@ function renderBodyH() {
     .map(([k,v]) => `<option value="${k}"${k===p2State.country?' selected':''}>${v.name}</option>`)
     .join('');
 
+  // Expense banners target values computed from the pre-adjustment baseline,
+  // so an Accept can never compound with itself or a prior country's Accept.
+  const base = d.baseExp != null ? d.baseExp : currentExp;
+
   // CoL banner — adjust expenses to purchasing-power equivalent
-  const colExp = Math.round(currentExp * cd.colIndex / 100 / 1000) * 1000;
-  const bannerCoL = (cd.colIndex !== 100 && Math.abs(colExp - currentExp) > 1000)
+  const colExp = p2ExpTarget(cd, {baseExp: base, colOn: true, taxOn: d.taxOn});
+  const bannerCoL = (!d.colOn && cd.colIndex !== 100 && Math.abs(colExp - currentExp) > 1000)
     ? `<div class="p2-banner">
         <span>Adjust expenses to ${fmtS(colExp)}/yr (${cd.colIndex}% CoL vs US)?</span>
-        <button class="p2-banner-accept" onclick="setSlider('sl-exp',${colExp})">Accept</button>
+        <button class="p2-banner-accept" onclick="p2ApplyExpAdj('col')">Accept</button>
        </div>` : '';
 
   // Tax gross-up banner — gross up expenses to cover income tax on withdrawals
-  const grossExp = cd.effectiveTaxRate > 0
-    ? Math.round(currentExp / (1 - cd.effectiveTaxRate / 100) / 1000) * 1000
-    : currentExp;
-  const bannerTax = (cd.effectiveTaxRate > 0 && Math.abs(grossExp - currentExp) > 1000)
+  const grossExp = p2ExpTarget(cd, {baseExp: base, colOn: d.colOn, taxOn: true});
+  const bannerTax = (!d.taxOn && cd.effectiveTaxRate > 0 && Math.abs(grossExp - currentExp) > 1000)
     ? `<div class="p2-banner">
         <span>Gross up expenses for ${cd.effectiveTaxRate}% income tax → ${fmtS(grossExp)}/yr?</span>
-        <button class="p2-banner-accept" onclick="setSlider('sl-exp',${grossExp})">Accept</button>
+        <button class="p2-banner-accept" onclick="p2ApplyExpAdj('tax')">Accept</button>
        </div>` : '';
 
   const bannerLE = Math.abs(cd.lifeExp - currentLE) > 0
     ? `<div class="p2-banner">
         <span>Update life expectancy to ${cd.lifeExp}?</span>
-        <button class="p2-banner-accept" onclick="setSlider('sl-lifeexp',${cd.lifeExp})">Accept</button>
+        <button class="p2-banner-accept" onclick="p2ApplyCountryVal('le',${cd.lifeExp})">Accept</button>
        </div>` : '';
   const bannerInf = Math.abs(cd.inflation - currentInf) > 0.05
     ? `<div class="p2-banner">
         <span>Update inflation to ${cd.inflation}%?</span>
-        <button class="p2-banner-accept" onclick="setSlider('sl-inf',${cd.inflation})">Accept</button>
+        <button class="p2-banner-accept" onclick="p2ApplyCountryVal('inf',${cd.inflation})">Accept</button>
        </div>` : '';
+
+  const appliedBits = [d.colOn ? 'CoL' : null, d.taxOn ? 'tax gross-up' : null].filter(Boolean);
+  const appliedNote = appliedBits.length
+    ? `<div style="font-size:10px;color:var(--green);margin-top:6px">✓ ${appliedBits.join(' + ')} applied to expenses (base ${fmtS(d.baseExp)}) — recalculated when you switch country · disable this card to revert</div>`
+    : '';
 
   const taxNoteHtml = cd.taxNote
     ? `<div style="font-size:10px;color:var(--mu);margin-top:5px;font-style:italic">★ ${cd.taxNote}</div>`
@@ -2460,14 +2525,14 @@ function renderBodyH() {
 
   return `
     <div style="font-size:10px;color:var(--mu2);margin-bottom:8px;line-height:1.5">
-      Selecting a country suggests adjustments — click <strong>Accept</strong> on any banner to apply. Each Accept updates one slider independently.
+      Selecting a country suggests adjustments — click <strong>Accept</strong> on any banner to apply. Disabling this card reverts them.
     </div>
     <select class="p2-select" onchange="p2SetCountry(this.value)">${opts}</select>
-    ${bannerCoL}${bannerTax}${bannerInf}${bannerLE}
+    ${bannerCoL}${bannerTax}${bannerInf}${bannerLE}${appliedNote}
     <div style="font-size:10px;color:var(--mu);margin-top:8px;line-height:1.8">
       Pension: <strong>${cd.ssLabel}</strong> · Claim age: <strong>${cd.ssClaimAge}</strong><br>
       Inflation: <strong>${cd.inflation}%</strong> · Life exp: <strong>${cd.lifeExp} yrs</strong> · CoL vs US: <strong>${cd.colIndex}%</strong><br>
-      Income tax (eff.): <strong>${cd.effectiveTaxRate}%</strong> · Capital gains: <strong>${cd.capitalGainsTax}%</strong>
+      Income tax (eff.): <strong>${cd.effectiveTaxRate}%</strong> · Capital gains: <strong>${cd.capitalGainsTax}%</strong> <span style="color:var(--mu2)">(reference only — not modeled)</span>
     </div>
     ${taxNoteHtml}`;
 }
@@ -2543,6 +2608,7 @@ function renderP2() {
 // ── Toggle handler ────────────────────────────────────────────
 function p2Toggle(id, checked) {
   p2State.active[id] = checked;
+  if (id === 'H' && !checked) p2RevertCountry();
   saveP2State();
   renderP2();
   schedule();
@@ -2550,7 +2616,9 @@ function p2Toggle(id, checked) {
 
 // ── Life event handlers ───────────────────────────────────────
 function p2AddEvent(type) {
-  const yr = new Date().getFullYear() + 1;
+  // Next calendar year, clamped into the simulated window (sim years are
+  // anchored to 2026; cashflows start in 2027)
+  const yr = Math.min(2073, Math.max(2027, new Date().getFullYear() + 1));
   const defaultNames = {downshift:'Downshift Savings', sabbatical:'Sabbatical', raise:'Raise', kids:'Kids / Expense'};
   const evt = type === 'sabbatical'
     ? {type, name: defaultNames[type] || '', startYear:yr, endYear:yr+2, budget:80000, enabled:true}
@@ -2562,7 +2630,7 @@ function p2AddEvent(type) {
 }
 
 function p2AddCustomEvent() {
-  const yr = new Date().getFullYear() + 1;
+  const yr = Math.min(2073, Math.max(2027, new Date().getFullYear() + 1));
   p2State.events.push({type:'custom', name:'Custom Event', startYear:yr, endYear:yr+2, pct:10, dollarMode:false, enabled:true});
   saveP2State();
   renderP2();
@@ -2624,8 +2692,70 @@ function p2DRemoveWindfall(i) {
 }
 
 // ── Country handler ───────────────────────────────────────────
+// Card H expense adjustments are tracked against a stored baseline
+// (p2State.data['H']) so an Accept can never compound with itself or with a
+// previously selected country's Accept.
+function p2HState() {
+  if (!p2State.data['H']) p2State.data['H'] = {};
+  const d = p2State.data['H'];
+  // A manual expense edit since the last Accept invalidates the baseline
+  if (d.lastApplied != null && +document.getElementById('sl-exp').value !== d.lastApplied) {
+    d.baseExp = null; d.colOn = false; d.taxOn = false; d.lastApplied = null;
+  }
+  return d;
+}
+
+function p2ExpTarget(cd, d) {
+  const col = d.colOn ? cd.colIndex / 100 : 1;
+  const tax = (d.taxOn && cd.effectiveTaxRate > 0) ? (1 - cd.effectiveTaxRate / 100) : 1;
+  return Math.round(d.baseExp * col / tax / 5000) * 5000; // match sl-exp step
+}
+
+function p2ApplyExpAdj(kind) {
+  const cd = COUNTRY_DATA[p2State.country] || COUNTRY_DATA['US'];
+  const d  = p2HState();
+  if (d.baseExp == null) d.baseExp = +document.getElementById('sl-exp').value;
+  if (kind === 'col') d.colOn = true; else d.taxOn = true;
+  setSlider('sl-exp', p2ExpTarget(cd, d));
+  d.lastApplied = +document.getElementById('sl-exp').value; // post-clamp value
+  saveP2State();
+  renderP2();
+}
+
+function p2ApplyCountryVal(kind, v) {
+  const d  = p2HState();
+  const id = kind === 'inf' ? 'sl-inf' : 'sl-lifeexp';
+  const baseKey = kind === 'inf' ? 'baseInf' : 'baseLE';
+  const appKey  = kind === 'inf' ? 'appliedInf' : 'appliedLE';
+  if (d[baseKey] == null) d[baseKey] = +document.getElementById(id).value;
+  setSlider(id, v);
+  d[appKey] = +document.getElementById(id).value;
+  saveP2State();
+  renderP2();
+}
+
+function p2RevertCountry() {
+  const d = p2State.data['H'];
+  if (!d) return;
+  // Undo only values this card set that the user hasn't since changed manually
+  if (d.baseExp != null && d.lastApplied != null && +document.getElementById('sl-exp').value === d.lastApplied)
+    setSlider('sl-exp', d.baseExp);
+  if (d.baseInf != null && d.appliedInf != null && +document.getElementById('sl-inf').value === d.appliedInf)
+    setSlider('sl-inf', d.baseInf);
+  if (d.baseLE != null && d.appliedLE != null && +document.getElementById('sl-lifeexp').value === d.appliedLE)
+    setSlider('sl-lifeexp', d.baseLE);
+  p2State.data['H'] = {};
+}
+
 function p2SetCountry(code) {
   p2State.country = code;
+  const d = p2HState();
+  // Re-derive applied expense adjustments from the baseline for the new country
+  if (d.baseExp != null && (d.colOn || d.taxOn)) {
+    const cd = COUNTRY_DATA[code] || COUNTRY_DATA['US'];
+    setSlider('sl-exp', p2ExpTarget(cd, d));
+    d.lastApplied = +document.getElementById('sl-exp').value;
+  }
   saveP2State();
   renderP2();
   schedule();
