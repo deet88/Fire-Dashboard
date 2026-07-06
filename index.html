@@ -13,7 +13,7 @@
   /* Core palette */
   --bg:#0d1117;--sur:#161b22;--sur2:#1c2330;
   --bdr:#30363d;--bdr-hover:#484f58;
-  --txt:#e6edf3;--mu:#8b949e;--mu2:#6e7681;
+  --txt:#e6edf3;--mu:#8b949e;--mu2:#838a95;
 
   /* Accent colors */
   --blue:#58a6ff;--blue-dim:rgba(88,166,255,0.15);
@@ -146,7 +146,6 @@ canvas{display:block;width:100%;height:100%}
 .ll{width:18px;height:2px}
 .lb{width:18px;height:7px;border-radius:2px}
 .snote{font-size:10px;color:var(--mu2);text-align:center;margin-top:6px}
-.rcol{display:flex;flex-direction:column;gap:12px}
 
 /* ─── FIRE cards ──────────────────────────────────────────── */
 .fc{
@@ -243,6 +242,7 @@ input[type=range]::-moz-range-thumb{
   transform:translateX(14px);background:white;
 }
 .tog:hover .ttrack{box-shadow:0 0 0 3px rgba(88,166,255,0.15)}
+.tog input:focus-visible + .ttrack{outline:2px solid var(--blue);outline-offset:2px}
 
 /* ─── Conditional section transitions ────────────────────── */
 #ss-wrap,#phases-wrap,#inh1-wrap,#inh2-wrap{
@@ -348,24 +348,11 @@ input[type=range]::-moz-range-thumb{
 .tab-pane{display:none}
 .tab-pane.active{display:block}
 
-/* ─── Sticky right panel ──────────────────────────────────── */
-.sticky-col{
-  position:sticky;top:20px;
-  max-height:calc(100vh - 40px);
-  overflow-y:auto;
-  scrollbar-width:thin;
-  scrollbar-color:var(--bdr) transparent;
-}
-.sticky-col::-webkit-scrollbar{width:4px}
-.sticky-col::-webkit-scrollbar-track{background:transparent}
-.sticky-col::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
-
 /* ─── Responsive ──────────────────────────────────────────── */
 
 /* Tablet (≤960px): single-column layout */
 @media(max-width:960px){
   .main{grid-template-columns:1fr !important}
-  .sticky-col{position:static;max-height:none;overflow-y:visible}
   .stat-bar{grid-template-columns:repeat(3,1fr)}
 }
 
@@ -473,8 +460,9 @@ input[type=range]::-moz-range-thumb{
   display:inline-flex;align-items:center;justify-content:center;
   width:16px;height:16px;border-radius:50%;
   background:var(--sur2);border:1px solid var(--bdr);
-  font-size:10px;color:var(--mu);cursor:default;flex-shrink:0;line-height:1;
+  font-size:10px;color:var(--mu);cursor:pointer;flex-shrink:0;line-height:1;
 }
+.q-tip-icon:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .q-tooltip-wrap{position:relative;display:inline-flex}
 .q-tooltip-bubble{
   display:none;position:absolute;left:50%;top:calc(100% + 8px);
@@ -485,7 +473,11 @@ input[type=range]::-moz-range-thumb{
   width:220px;z-index:200;box-shadow:var(--shadow-md);
   pointer-events:none;white-space:normal;
 }
-.q-tooltip-wrap:hover .q-tooltip-bubble{display:block}
+/* Hover for mouse users, :focus-within for keyboard, .open for tap/click
+   (touch has no hover, so the icon toggles this class on click). */
+.q-tooltip-wrap:hover .q-tooltip-bubble,
+.q-tooltip-wrap:focus-within .q-tooltip-bubble,
+.q-tooltip-wrap.open .q-tooltip-bubble{display:block}
 .q-input{
   width:100%;background:var(--sur2);border:1px solid var(--bdr);
   border-radius:var(--r-sm);padding:9px 12px;
@@ -516,6 +508,7 @@ input[type=range]::-moz-range-thumb{
              background var(--dur-fast) var(--ease);
 }
 .risk-card:hover{border-color:var(--bdr-hover);background:#212936}
+.risk-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .risk-card.selected{border-color:var(--blue);background:var(--blue-dim);transform:scale(1.02)}
 .risk-pie{display:flex;justify-content:center;margin-bottom:6px}
 .risk-legend{display:flex;justify-content:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
@@ -645,7 +638,7 @@ input[type=range]::-moz-range-thumb{
     <div class="q-step">
       <div class="q-label-row">
         <label class="q-label" for="q-age">1. How old are you today?</label>
-        <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">This is your starting point for all projections.</div></div>
+        <div class="q-tooltip-wrap"><span class="q-tip-icon" tabindex="0" role="button" aria-label="More info" onclick="this.parentElement.classList.toggle('open')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.parentElement.classList.toggle('open')}">?</span><div class="q-tooltip-bubble">This is your starting point for all projections.</div></div>
       </div>
       <input type="number" id="q-age" class="q-input" placeholder="e.g. 35" min="18" max="100">
       <div class="q-error" id="err-age"></div>
@@ -655,7 +648,7 @@ input[type=range]::-moz-range-thumb{
     <div class="q-step">
       <div class="q-label-row">
         <label class="q-label" for="q-retage">2. At what age do you want to retire?</label>
-        <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">The age when you plan to stop working and live off your portfolio. Can be early (FIRE) or traditional.</div></div>
+        <div class="q-tooltip-wrap"><span class="q-tip-icon" tabindex="0" role="button" aria-label="More info" onclick="this.parentElement.classList.toggle('open')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.parentElement.classList.toggle('open')}">?</span><div class="q-tooltip-bubble">The age when you plan to stop working and live off your portfolio. Can be early (FIRE) or traditional.</div></div>
       </div>
       <input type="number" id="q-retage" class="q-input" placeholder="e.g. 55" min="18" max="100">
       <div class="q-helper">Hint: Many people target 55–70. Some go much earlier.</div>
@@ -666,7 +659,7 @@ input[type=range]::-moz-range-thumb{
     <div class="q-step">
       <div class="q-label-row">
         <label class="q-label" for="q-lifeexp">3. How long do you expect to live?</label>
-        <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">Your planning horizon — your portfolio must last until this age. Planning longer is more conservative.</div></div>
+        <div class="q-tooltip-wrap"><span class="q-tip-icon" tabindex="0" role="button" aria-label="More info" onclick="this.parentElement.classList.toggle('open')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.parentElement.classList.toggle('open')}">?</span><div class="q-tooltip-bubble">Your planning horizon — your portfolio must last until this age. Planning longer is more conservative.</div></div>
       </div>
       <input type="number" id="q-lifeexp" class="q-input" placeholder="e.g. 90" min="70" max="120">
       <div class="q-helper">US average is ~80–82. Excellent health or family longevity? Adjust higher.</div>
@@ -677,7 +670,7 @@ input[type=range]::-moz-range-thumb{
     <div class="q-step">
       <div class="q-label-row">
         <label class="q-label" for="q-nw">4. What's your current net worth (investable assets minus debt)?</label>
-        <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">Include: retirement accounts (401k, IRA), brokerage, real estate equity. Exclude: primary home if you plan to keep it, personal possessions.</div></div>
+        <div class="q-tooltip-wrap"><span class="q-tip-icon" tabindex="0" role="button" aria-label="More info" onclick="this.parentElement.classList.toggle('open')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.parentElement.classList.toggle('open')}">?</span><div class="q-tooltip-bubble">Include: retirement accounts (401k, IRA), brokerage, real estate equity. Exclude: primary home if you plan to keep it, personal possessions.</div></div>
       </div>
       <div class="q-currency-row">
         <select id="q-currency" class="q-select">
@@ -695,7 +688,7 @@ input[type=range]::-moz-range-thumb{
     <div class="q-step">
       <div class="q-label-row">
         <label class="q-label" for="q-exp">5. How much do you plan to spend annually in retirement?</label>
-        <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">Your desired annual retirement spending. Include: housing, food, travel, healthcare, insurance, entertainment.</div></div>
+        <div class="q-tooltip-wrap"><span class="q-tip-icon" tabindex="0" role="button" aria-label="More info" onclick="this.parentElement.classList.toggle('open')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.parentElement.classList.toggle('open')}">?</span><div class="q-tooltip-bubble">Your desired annual retirement spending. Include: housing, food, travel, healthcare, insurance, entertainment.</div></div>
       </div>
       <div class="q-currency-row">
         <select id="q-exp-currency" class="q-select">
@@ -713,7 +706,7 @@ input[type=range]::-moz-range-thumb{
     <div class="q-step">
       <div class="q-label-row">
         <label class="q-label" for="q-save">6. How much do you save per year (before retirement)?</label>
-        <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">Your annual contributions to retirement/investment accounts. This determines how quickly your portfolio grows before you retire.</div></div>
+        <div class="q-tooltip-wrap"><span class="q-tip-icon" tabindex="0" role="button" aria-label="More info" onclick="this.parentElement.classList.toggle('open')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.parentElement.classList.toggle('open')}">?</span><div class="q-tooltip-bubble">Your annual contributions to retirement/investment accounts. This determines how quickly your portfolio grows before you retire.</div></div>
       </div>
       <div class="q-currency-row">
         <select id="q-save-currency" class="q-select">
@@ -731,9 +724,9 @@ input[type=range]::-moz-range-thumb{
     <div class="q-step">
       <div class="q-label-row">
         <label class="q-label">7. Which investment mix matches your comfort level?</label>
-        <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">These are illustrative starting points. You can adjust return & volatility assumptions in the dashboard at any time.</div></div>
+        <div class="q-tooltip-wrap"><span class="q-tip-icon" tabindex="0" role="button" aria-label="More info" onclick="this.parentElement.classList.toggle('open')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.parentElement.classList.toggle('open')}">?</span><div class="q-tooltip-bubble">These are illustrative starting points. You can adjust return & volatility assumptions in the dashboard at any time.</div></div>
       </div>
-      <div class="risk-grid" id="risk-grid"></div>
+      <div class="risk-grid" id="risk-grid" role="radiogroup" aria-label="Risk profile"></div>
       <div class="q-helper">Uncertain? Start with Balanced. You can change it anytime.</div>
     </div>
 
@@ -799,14 +792,14 @@ input[type=range]::-moz-range-thumb{
       </div>
       <div class="legend">
         <div class="li"><div class="ll" style="background:#58a6ff;height:2.5px"></div><span>P50 Median</span></div>
-        <div class="li"><div class="lb" style="background:rgba(88,166,255,0.22)"></div><span>P25–P75</span></div>
-        <div class="li"><div class="lb" style="background:rgba(88,166,255,0.09)"></div><span>P10–P90</span></div>
-        <div class="li"><div class="ll" style="background:rgba(88,166,255,0.4);border-top:2px dashed rgba(88,166,255,0.4)"></div><span>P10/P90 bounds</span></div>
-        <div class="li"><div class="ll" style="background:#4caf50;border-top:2px dashed #4caf50"></div><span>— FIRE thresholds (Lean → Fat)</span></div>
-        <div class="li"><div class="ll" style="background:var(--orange)"></div><span>↘ Sabbatical</span></div>
-        <div class="li"><div class="ll" style="background:var(--green)"></div><span>↑ Windfall</span></div>
-        <div class="li"><div class="ll" style="background:#bc8cff;border-top:2px dashed #bc8cff"></div><span>DWZ glide path</span></div>
-        <div class="li"><div class="ll" style="background:rgba(139,148,158,0.6);border-top:2px dashed rgba(139,148,158,0.6)"></div><span>Saved scenario</span></div>
+        <div class="li" id="li-p75"><div class="lb" style="background:rgba(88,166,255,0.22)"></div><span>P25–P75</span></div>
+        <div class="li" id="li-p90"><div class="lb" style="background:rgba(88,166,255,0.09)"></div><span>P10–P90</span></div>
+        <div class="li" id="li-p90b"><div class="ll" style="background:rgba(88,166,255,0.4);border-top:2px dashed rgba(88,166,255,0.4)"></div><span>P10/P90 bounds</span></div>
+        <div class="li" id="li-fire"><div class="ll" style="background:#4caf50;border-top:2px dashed #4caf50"></div><span>— FIRE thresholds (Lean → Fat)</span></div>
+        <div class="li" id="li-sab"><div class="ll" style="background:var(--orange)"></div><span>↘ Sabbatical</span></div>
+        <div class="li" id="li-wind"><div class="ll" style="background:var(--green)"></div><span>↑ Windfall</span></div>
+        <div class="li" id="li-dwz"><div class="ll" style="background:#bc8cff;border-top:2px dashed #bc8cff"></div><span>DWZ glide path</span></div>
+        <div class="li" id="li-saved"><div class="ll" style="background:rgba(139,148,158,0.6);border-top:2px dashed rgba(139,148,158,0.6)"></div><span>Saved scenario</span></div>
       </div>
       <div class="snote">Running <span id="sim-count">500</span> simulations · <span id="run-time2">—</span></div>
     </div>
@@ -850,9 +843,14 @@ input[type=range]::-moz-range-thumb{
             <div class="sg-row"><input type="range" id="sl-inf" min="0" max="8" step="0.25" value="3"><input type="number" id="sln-inf" class="numin" min="0" max="8" step="0.25" value="3"></div>
           </div>
         </div>
+        <div class="div"></div>
+        <div class="sec">Simulation<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
+        <div class="sec-wrap" style="max-height:100px">
+          <div class="sg"><div class="sr"><span>Simulations</span></div><div class="sg-row"><input type="range" id="sl-sims" min="100" max="5000" step="100" value="500"><input type="number" id="sln-sims" class="numin" min="100" max="5000" step="100" value="500"></div></div>
+        </div>
       </div>
 
-      <!-- Chart Layers + Simulation -->
+      <!-- Chart Layers + Scenario Comparison -->
       <div class="panel">
         <div class="sec">Chart Layers<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:300px">
@@ -860,11 +858,6 @@ input[type=range]::-moz-range-thumb{
           <div class="tr"><label>Show sabbatical markers</label><label class="tog"><input type="checkbox" id="tog-marks" checked><span class="ttrack"></span></label></div>
           <div class="tr"><label>Show P10/P90 outer band</label><label class="tog"><input type="checkbox" id="tog-p90"><span class="ttrack"></span></label></div>
           <div class="tr"><label>Show P25/P75 inner band</label><label class="tog"><input type="checkbox" id="tog-p75" checked><span class="ttrack"></span></label></div>
-        </div>
-        <div class="div"></div>
-        <div class="sec">Simulation<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
-        <div class="sec-wrap" style="max-height:100px">
-          <div class="sg"><div class="sr"><span>Simulations</span><strong><span id="v-sims">500</span></strong></div><input type="range" id="sl-sims" min="100" max="5000" step="100" value="500"></div>
         </div>
         <div class="div"></div>
         <div class="sec">Scenario Comparison<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
@@ -882,6 +875,7 @@ input[type=range]::-moz-range-thumb{
 
     <div class="panel">
       <div class="sec">FIRE Status</div>
+      <div style="font-size:10.5px;color:var(--mu2);margin:-6px 0 10px">Probability of reaching each tier by your target retirement year (<span id="fire-status-yr">—</span>)</div>
       <div id="fire-cards"></div>
     </div>
 
@@ -1488,6 +1482,7 @@ canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; })
 function renderCards(thr, currentNW, sim, benchmarkYr) {
   const el = document.getElementById('fire-cards');
   el.innerHTML = '';
+  document.getElementById('fire-status-yr').textContent = benchmarkYr;
 
   const medianCross = t => {
     for (let i=0; i<sim.p50.length; i++) if (sim.p50[i]>=t) return sim.years[i];
@@ -1531,7 +1526,11 @@ function renderStats(p, thr, sim, extra) {
   const reg = thr.find(t=>t.key==='regular');
   let cross = null;
   for (let i=0;i<sim.p50.length;i++) { if(sim.p50[i]>=reg.thr){cross=sim.years[i];break;} }
-  document.getElementById('s-regular').textContent     = cross ? String(cross) : '>'+sim.years[sim.years.length-1];
+  // Plain "2040" reads ambiguously next to sibling cards that are all $/% —
+  // a small "year" unit label disambiguates it as a date, not a magnitude.
+  const regularYr = cross ? String(cross) : '>'+sim.years[sim.years.length-1];
+  document.getElementById('s-regular').innerHTML = regularYr +
+    '<span style="font-size:0.5em;font-weight:500;color:var(--mu);margin-left:4px;letter-spacing:.03em">YEAR</span>';
   document.getElementById('s-regular-sub').textContent = 'Target: '+fmtS(reg.thr);
   const lifeExpYr = 2026+(p.lifeExp-p.currentAge);
   const iLE = sim.years.indexOf(lifeExpYr);
@@ -1602,7 +1601,6 @@ function getP() {
 }
 function updateLabels(p) {
   document.getElementById('v-realret').textContent = (p.ret*100).toFixed(1);
-  document.getElementById('v-sims').textContent    = p.numSims;
   document.getElementById('sim-count').textContent = p.numSims;
   document.getElementById('sim-badge').textContent = p.numSims+' sims';
   document.getElementById('v-inh1amt').textContent = fmtC(p.inh1amt);
@@ -1668,16 +1666,33 @@ function refresh() {
     }
   }
 
+  const showFireLines  = document.getElementById('tog-fire').checked;
+  const showSabMarkers = document.getElementById('tog-marks').checked;
+  const showP90band    = document.getElementById('tog-p90').checked;
+  const showP75band    = document.getElementById('tog-p75').checked;
   drawChart(sim, thr, {
-    showFireLines:  document.getElementById('tog-fire').checked,
-    showSabMarkers: document.getElementById('tog-marks').checked,
-    showP90band:    document.getElementById('tog-p90').checked,
-    showP75band:    document.getElementById('tog-p75').checked,
+    showFireLines, showSabMarkers, showP90band, showP75band,
     inh1on: p.inh1on, inh1yr: p.inh1yr, inh1amt: p.inh1amt,
     inh2on: p.inh2on, inh2yr: p.inh2yr, inh2amt: p.inh2amt,
     windfalls: p.windfalls,
     dzwPath: p.dzwOn ? dzwPath : null,
     savedScenario: _savedScenario,
+  });
+  // Only list legend entries for layers actually drawn on the chart right
+  // now — otherwise it always implies all 9 possible layers are present.
+  const hasWindfalls = p.inh1on || p.inh2on || (p.windfalls && p.windfalls.some(w => w.amt > 0));
+  const legendVis = {
+    'li-p75':   showP75band,
+    'li-p90':   showP90band,
+    'li-p90b':  showP90band,
+    'li-fire':  showFireLines,
+    'li-sab':   showSabMarkers && !!p2State.active['A'],
+    'li-wind':  hasWindfalls,
+    'li-dwz':   p.dzwOn,
+    'li-saved': !!_savedScenario,
+  };
+  Object.entries(legendVis).forEach(([id, show]) => {
+    document.getElementById(id).style.display = show ? '' : 'none';
   });
   renderCards(thr, p.currentNW, sim, retireYr);
   renderStats(p, thr, sim, { probSuccess, dzwBudget });
@@ -1718,7 +1733,7 @@ function linkNumberInput(sliderId, numId) {
 }
 [['sl-nw','sln-nw'], ['sl-exp','sln-exp'], ['sl-swr','sln-swr'], ['sl-age','sln-age'],
  ['sl-ret-age','sln-ret-age'], ['sl-lifeexp','sln-lifeexp'], ['sl-lon','sln-lon'],
- ['sl-ret','sln-ret'], ['sl-vol','sln-vol'], ['sl-inf','sln-inf']]
+ ['sl-ret','sln-ret'], ['sl-vol','sln-vol'], ['sl-inf','sln-inf'], ['sl-sims','sln-sims']]
   .forEach(([sliderId, numId]) => linkNumberInput(sliderId, numId));
 
 // Current Age < Retirement Age < Life Expectancy must always hold — the
@@ -1756,6 +1771,13 @@ function enforceAgeOrder() {
   .forEach(id => document.getElementById(id).addEventListener('input', schedule));
 
 window.addEventListener('resize', schedule);
+
+// Tap-to-open tooltips (see .q-tip-icon) close when tapping anywhere else.
+document.addEventListener('click', (ev) => {
+  document.querySelectorAll('.q-tooltip-wrap.open').forEach(w => {
+    if (!w.contains(ev.target)) w.classList.remove('open');
+  });
+});
 
 renderSabEditor();
 // Note: no refresh() here — p2State (declared in the Phase 2 script block below)
@@ -1799,7 +1821,13 @@ function renderRiskCards() {
   Object.entries(RISK_PROFILES).forEach(([name, p]) => {
     const card = document.createElement('div');
     card.className = 'risk-card' + (name===_selectedRisk?' selected':'');
+    card.tabIndex = 0;
+    card.setAttribute('role', 'radio');
+    card.setAttribute('aria-checked', name===_selectedRisk ? 'true' : 'false');
     card.onclick = () => selectRisk(name);
+    card.onkeydown = (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectRisk(name); }
+    };
     card.innerHTML = `
       <div class="risk-pie">${pieSVG([{pct:p.stocks,color:SC},{pct:p.bonds,color:BC},{pct:p.other,color:OC}])}</div>
       <div class="risk-legend">
@@ -1820,7 +1848,9 @@ function renderRiskCards() {
 function selectRisk(name) {
   _selectedRisk = name;
   document.querySelectorAll('.risk-card').forEach((c,i) => {
-    c.classList.toggle('selected', Object.keys(RISK_PROFILES)[i]===name);
+    const isSel = Object.keys(RISK_PROFILES)[i]===name;
+    c.classList.toggle('selected', isSel);
+    c.setAttribute('aria-checked', isSel ? 'true' : 'false');
   });
 }
 
@@ -2301,24 +2331,21 @@ function renderBodyA() {
     const numStyle = 'padding:3px 5px;font-size:11px;border:1px solid var(--bdr);border-radius:4px;background:var(--sur2);color:var(--txt);font-family:inherit';
     const lastControl = isSabbatical || dollarMode ? `
       <div class="sg">
-        <div class="sr"><span>${isSabbatical?'Annual Expenses (that year)':'Fixed annual expense ($)'}</span><strong>$<span id="p2a-bgt-${i}">${fmtC(e.budget || (isSabbatical?80000:10000))}</span></strong></div>
+        <div class="sr"><span>${isSabbatical?'Annual Expenses (that year)':'Fixed annual expense ($)'}</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" min="0" max="500000" step="5000" value="${e.budget || (isSabbatical?80000:10000)}" style="flex:1"
-            oninput="p2State.events[${i}].budget=+this.value;document.getElementById('p2a-bgt-${i}').textContent=fmtC(+this.value);document.getElementById('p2a-bgtn-${i}').value=this.value;saveP2State();schedule()">
+            oninput="p2State.events[${i}].budget=+this.value;document.getElementById('p2a-bgtn-${i}').value=this.value;saveP2State();schedule()">
           <input type="number" id="p2a-bgtn-${i}" min="0" max="500000" step="5000" value="${e.budget || (isSabbatical?80000:10000)}" style="width:92px;${numStyle}"
-            oninput="const v=Math.min(500000,Math.max(0,+this.value||0));p2State.events[${i}].budget=v;document.getElementById('p2a-bgt-${i}').textContent=fmtC(v);this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(500000,Math.max(0,+this.value||0));p2State.events[${i}].budget=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>` : `
       <div class="sg">
-        <div class="sr">
-          <span>${pctLabel}</span>
-          <strong><span id="p2a-pct-${i}">${e.pct}</span>%</strong>
-        </div>
+        <div class="sr"><span>${pctLabel}</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" min="0" max="100" step="1" value="${e.pct}" style="flex:1"
-            oninput="p2State.events[${i}].pct=+this.value;document.getElementById('p2a-pct-${i}').textContent=this.value;document.getElementById('p2a-pctn-${i}').value=this.value;saveP2State();schedule()">
+            oninput="p2State.events[${i}].pct=+this.value;document.getElementById('p2a-pctn-${i}').value=this.value;saveP2State();schedule()">
           <input type="number" id="p2a-pctn-${i}" min="0" max="100" step="1" value="${e.pct}" style="width:56px;${numStyle}"
-            oninput="const v=Math.min(100,Math.max(0,+this.value||0));p2State.events[${i}].pct=v;document.getElementById('p2a-pct-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(100,Math.max(0,+this.value||0));p2State.events[${i}].pct=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
         ${kidsNote}${raiseNote}
       </div>`;
@@ -2329,30 +2356,30 @@ function renderBodyA() {
       </div>
       ${hasRange ? `
       <div class="sg">
-        <div class="sr"><span>Start year</span><strong><span id="p2a-sy-${i}">${e.startYear}</span></strong></div>
+        <div class="sr"><span>Start year</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" min="2027" max="2075" step="1" value="${e.startYear}" style="flex:1"
-            oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-sy-${i}').textContent=this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
+            oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
           <input type="number" id="p2a-syn-${i}" min="2027" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;document.getElementById('p2a-sy-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>
       <div class="sg">
-        <div class="sr"><span>End year</span><strong><span id="p2a-ey-${i}">${e.endYear}</span></strong></div>
+        <div class="sr"><span>End year</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" min="2027" max="2075" step="1" value="${e.endYear}" style="flex:1"
-            oninput="p2State.events[${i}].endYear=+this.value;document.getElementById('p2a-ey-${i}').textContent=this.value;document.getElementById('p2a-eyn-${i}').value=this.value;saveP2State();schedule()">
+            oninput="p2State.events[${i}].endYear=+this.value;document.getElementById('p2a-eyn-${i}').value=this.value;saveP2State();schedule()">
           <input type="number" id="p2a-eyn-${i}" min="2027" max="2075" step="1" value="${e.endYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].endYear=v;document.getElementById('p2a-ey-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].endYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>` : `
       <div class="sg">
-        <div class="sr"><span>Starting year</span><strong><span id="p2a-sy-${i}">${e.startYear}</span></strong></div>
+        <div class="sr"><span>Starting year</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" min="2027" max="2075" step="1" value="${e.startYear}" style="flex:1"
-            oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-sy-${i}').textContent=this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
+            oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
           <input type="number" id="p2a-syn-${i}" min="2027" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;document.getElementById('p2a-sy-${i}').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>`}
       ${customModeToggle}${lastControl}
@@ -2426,14 +2453,22 @@ function renderBodyC() {
   return `
     <div style="font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px">Person 1</div>
     <div class="sg">
-      <div class="sr"><span>${p2SSLabel()}</span><strong>$<span id="p2c-ssamt-v">${fmtC(d.ssAmt)}</span>/yr</strong></div>
-      <input type="range" min="0" max="60000" step="1000" value="${d.ssAmt}"
-        oninput="p2State.data['C'].ssAmt=+this.value;document.getElementById('p2c-ssamt-v').textContent=fmtC(+this.value);saveP2State();schedule()">
+      <div class="sr"><span>${p2SSLabel()}</span></div>
+      <div class="sg-row">
+        <input type="range" id="p2c-ssamt" min="0" max="60000" step="1000" value="${d.ssAmt}"
+          oninput="p2State.data['C'].ssAmt=+this.value;document.getElementById('p2c-ssamt-n').value=this.value;saveP2State();schedule()">
+        <input type="number" id="p2c-ssamt-n" class="numin" min="0" max="60000" step="1000" value="${d.ssAmt}"
+          oninput="const v=Math.min(60000,Math.max(0,+this.value||0));p2State.data['C'].ssAmt=v;document.getElementById('p2c-ssamt').value=v;saveP2State();schedule()">
+      </div>
     </div>
     <div class="sg">
-      <div class="sr"><span>Claim age</span><strong><span id="p2c-ssage-v">${d.ssAge}</span></strong></div>
-      <input type="range" min="60" max="75" step="1" value="${d.ssAge}"
-        oninput="p2State.data['C'].ssAge=+this.value;document.getElementById('p2c-ssage-v').textContent=this.value;saveP2State();schedule()">
+      <div class="sr"><span>Claim age</span></div>
+      <div class="sg-row">
+        <input type="range" id="p2c-ssage" min="60" max="75" step="1" value="${d.ssAge}"
+          oninput="p2State.data['C'].ssAge=+this.value;document.getElementById('p2c-ssage-n').value=this.value;saveP2State();schedule()">
+        <input type="number" id="p2c-ssage-n" class="numin" min="60" max="75" step="1" value="${d.ssAge}"
+          oninput="const v=Math.min(75,Math.max(60,+this.value||60));p2State.data['C'].ssAge=v;document.getElementById('p2c-ssage').value=v;saveP2State();schedule()">
+      </div>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 6px">
       <div style="font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em">Person 2 (spouse / partner)</div>
@@ -2442,14 +2477,22 @@ function renderBodyC() {
     </div>
     <div style="${ss2Dim}">
       <div class="sg">
-        <div class="sr"><span>${p2SSLabel()}</span><strong>$<span id="p2c-ss2amt-v">${fmtC(d.ss2Amt)}</span>/yr</strong></div>
-        <input type="range" min="0" max="60000" step="1000" value="${d.ss2Amt}"
-          oninput="p2State.data['C'].ss2Amt=+this.value;document.getElementById('p2c-ss2amt-v').textContent=fmtC(+this.value);saveP2State();schedule()">
+        <div class="sr"><span>${p2SSLabel()}</span></div>
+        <div class="sg-row">
+          <input type="range" id="p2c-ss2amt" min="0" max="60000" step="1000" value="${d.ss2Amt}"
+            oninput="p2State.data['C'].ss2Amt=+this.value;document.getElementById('p2c-ss2amt-n').value=this.value;saveP2State();schedule()">
+          <input type="number" id="p2c-ss2amt-n" class="numin" min="0" max="60000" step="1000" value="${d.ss2Amt}"
+            oninput="const v=Math.min(60000,Math.max(0,+this.value||0));p2State.data['C'].ss2Amt=v;document.getElementById('p2c-ss2amt').value=v;saveP2State();schedule()">
+        </div>
       </div>
       <div class="sg">
-        <div class="sr"><span>Claim age</span><strong><span id="p2c-ss2age-v">${d.ss2Age}</span></strong></div>
-        <input type="range" min="60" max="75" step="1" value="${d.ss2Age}"
-          oninput="p2State.data['C'].ss2Age=+this.value;document.getElementById('p2c-ss2age-v').textContent=this.value;saveP2State();schedule()">
+        <div class="sr"><span>Claim age</span></div>
+        <div class="sg-row">
+          <input type="range" id="p2c-ss2age" min="60" max="75" step="1" value="${d.ss2Age}"
+            oninput="p2State.data['C'].ss2Age=+this.value;document.getElementById('p2c-ss2age-n').value=this.value;saveP2State();schedule()">
+          <input type="number" id="p2c-ss2age-n" class="numin" min="60" max="75" step="1" value="${d.ss2Age}"
+            oninput="const v=Math.min(75,Math.max(60,+this.value||60));p2State.data['C'].ss2Age=v;document.getElementById('p2c-ss2age').value=v;saveP2State();schedule()">
+        </div>
       </div>
     </div>`;
 }
@@ -2473,21 +2516,21 @@ function renderBodyD() {
         <button class="sab-remove" onclick="p2DRemoveWindfall(${i})">✕ Remove</button>
       </div>
       <div class="sg">
-        <div class="sr"><span>Amount</span><strong>$<span id="p2d-amt-${i}-v">${fmtC(w.amt)}</span></strong></div>
+        <div class="sr"><span>Amount</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" min="0" max="5000000" step="50000" value="${w.amt}" style="flex:1"
-            oninput="p2State.data['D'].windfalls[${i}].amt=+this.value;document.getElementById('p2d-amt-${i}-v').textContent=fmtC(+this.value);document.getElementById('p2d-amtn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2d-amtn-${i}" min="0" max="5000000" step="50000" value="${w.amt}" style="width:92px;padding:3px 5px;font-size:11px;border:1px solid var(--bdr);border-radius:4px;background:var(--sur2);color:var(--txt);font-family:inherit"
-            oninput="const v=Math.min(5000000,Math.max(0,+this.value||0));p2State.data['D'].windfalls[${i}].amt=v;document.getElementById('p2d-amt-${i}-v').textContent=fmtC(v);this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="p2State.data['D'].windfalls[${i}].amt=+this.value;document.getElementById('p2d-amtn-${i}').value=this.value;saveP2State();schedule()">
+          <input type="number" id="p2d-amtn-${i}" min="0" max="5000000" step="50000" value="${w.amt}" class="numin" style="width:92px"
+            oninput="const v=Math.min(5000000,Math.max(0,+this.value||0));p2State.data['D'].windfalls[${i}].amt=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>
       <div class="sg">
-        <div class="sr"><span>Year received</span><strong><span id="p2d-yr-${i}-v">${w.yr}</span></strong></div>
+        <div class="sr"><span>Year received</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" min="2027" max="2075" step="1" value="${w.yr}" style="flex:1"
-            oninput="p2State.data['D'].windfalls[${i}].yr=+this.value;document.getElementById('p2d-yr-${i}-v').textContent=this.value;document.getElementById('p2d-yrn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2d-yrn-${i}" min="2027" max="2075" step="1" value="${w.yr}" style="width:62px;padding:3px 5px;font-size:11px;border:1px solid var(--bdr);border-radius:4px;background:var(--sur2);color:var(--txt);font-family:inherit"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.data['D'].windfalls[${i}].yr=v;document.getElementById('p2d-yr-${i}-v').textContent=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="p2State.data['D'].windfalls[${i}].yr=+this.value;document.getElementById('p2d-yrn-${i}').value=this.value;saveP2State();schedule()">
+          <input type="number" id="p2d-yrn-${i}" min="2027" max="2075" step="1" value="${w.yr}" class="numin" style="width:62px"
+            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.data['D'].windfalls[${i}].yr=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>
     </div>`).join('');
@@ -2506,24 +2549,40 @@ function renderBodyE() {
   const d = p2State.data['E'];
   return `
     <div class="sg" style="margin-top:10px">
-      <div class="sr"><span>Go-go → Slow-go age</span><strong><span id="p2e-sga-v">${d.slowGoAge}</span></strong></div>
-      <input type="range" min="60" max="85" step="1" value="${d.slowGoAge}"
-        oninput="p2State.data['E'].slowGoAge=+this.value;document.getElementById('p2e-sga-v').textContent=this.value;saveP2State();schedule()">
+      <div class="sr"><span>Go-go → Slow-go age</span></div>
+      <div class="sg-row">
+        <input type="range" id="p2e-sga" min="60" max="85" step="1" value="${d.slowGoAge}"
+          oninput="p2State.data['E'].slowGoAge=+this.value;document.getElementById('p2e-sga-n').value=this.value;saveP2State();schedule()">
+        <input type="number" id="p2e-sga-n" class="numin" min="60" max="85" step="1" value="${d.slowGoAge}"
+          oninput="const v=Math.min(85,Math.max(60,+this.value||60));p2State.data['E'].slowGoAge=v;document.getElementById('p2e-sga').value=v;saveP2State();schedule()">
+      </div>
     </div>
     <div class="sg">
-      <div class="sr"><span>Slow-go spending</span><strong><span id="p2e-sgm-v">${Math.round(d.slowGoMult*100)}</span>% of base</strong></div>
-      <input type="range" min="40" max="100" step="5" value="${Math.round(d.slowGoMult*100)}"
-        oninput="p2State.data['E'].slowGoMult=+this.value/100;document.getElementById('p2e-sgm-v').textContent=this.value;saveP2State();schedule()">
+      <div class="sr"><span>Slow-go spending (% of base)</span></div>
+      <div class="sg-row">
+        <input type="range" id="p2e-sgm" min="40" max="100" step="5" value="${Math.round(d.slowGoMult*100)}"
+          oninput="p2State.data['E'].slowGoMult=+this.value/100;document.getElementById('p2e-sgm-n').value=this.value;saveP2State();schedule()">
+        <input type="number" id="p2e-sgm-n" class="numin" min="40" max="100" step="5" value="${Math.round(d.slowGoMult*100)}"
+          oninput="const v=Math.min(100,Math.max(40,+this.value||40));p2State.data['E'].slowGoMult=v/100;document.getElementById('p2e-sgm').value=v;saveP2State();schedule()">
+      </div>
     </div>
     <div class="sg">
-      <div class="sr"><span>Slow-go → No-go age</span><strong><span id="p2e-nga-v">${d.noGoAge}</span></strong></div>
-      <input type="range" min="70" max="95" step="1" value="${d.noGoAge}"
-        oninput="p2State.data['E'].noGoAge=+this.value;document.getElementById('p2e-nga-v').textContent=this.value;saveP2State();schedule()">
+      <div class="sr"><span>Slow-go → No-go age</span></div>
+      <div class="sg-row">
+        <input type="range" id="p2e-nga" min="70" max="95" step="1" value="${d.noGoAge}"
+          oninput="p2State.data['E'].noGoAge=+this.value;document.getElementById('p2e-nga-n').value=this.value;saveP2State();schedule()">
+        <input type="number" id="p2e-nga-n" class="numin" min="70" max="95" step="1" value="${d.noGoAge}"
+          oninput="const v=Math.min(95,Math.max(70,+this.value||70));p2State.data['E'].noGoAge=v;document.getElementById('p2e-nga').value=v;saveP2State();schedule()">
+      </div>
     </div>
     <div class="sg">
-      <div class="sr"><span>No-go spending</span><strong><span id="p2e-ngm-v">${Math.round(d.noGoMult*100)}</span>% of base</strong></div>
-      <input type="range" min="30" max="100" step="5" value="${Math.round(d.noGoMult*100)}"
-        oninput="p2State.data['E'].noGoMult=+this.value/100;document.getElementById('p2e-ngm-v').textContent=this.value;saveP2State();schedule()">
+      <div class="sr"><span>No-go spending (% of base)</span></div>
+      <div class="sg-row">
+        <input type="range" id="p2e-ngm" min="30" max="100" step="5" value="${Math.round(d.noGoMult*100)}"
+          oninput="p2State.data['E'].noGoMult=+this.value/100;document.getElementById('p2e-ngm-n').value=this.value;saveP2State();schedule()">
+        <input type="number" id="p2e-ngm-n" class="numin" min="30" max="100" step="5" value="${Math.round(d.noGoMult*100)}"
+          oninput="const v=Math.min(100,Math.max(30,+this.value||30));p2State.data['E'].noGoMult=v/100;document.getElementById('p2e-ngm').value=v;saveP2State();schedule()">
+      </div>
     </div>`;
 }
 
