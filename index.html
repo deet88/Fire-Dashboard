@@ -172,6 +172,9 @@ canvas{display:block;width:100%;height:100%}
 .sr{display:flex;justify-content:space-between;margin-bottom:5px;align-items:baseline}
 .sr span{font-size:11px;color:var(--mu)}
 .sr strong{font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.sg-row{display:flex;align-items:center;gap:8px}
+.sg-row input[type=range]{flex:1}
+.numin{width:84px;padding:3px 5px;font-size:11px;border:1px solid var(--bdr);border-radius:4px;background:var(--sur2);color:var(--txt);font-family:inherit}
 
 input[type=range]{
   -webkit-appearance:none;width:100%;height:3px;
@@ -815,17 +818,17 @@ input[type=range]::-moz-range-thumb{
       <div class="panel">
         <div class="sec">Your Numbers<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:600px">
-          <div class="sg"><div class="sr"><span>Current Net Worth</span><strong>$<span id="v-nw">0</span></strong></div><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"></div>
-          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span><strong>$<span id="v-exp">0</span></strong></div><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"></div>
-          <div class="sg"><div class="sr"><span>Safe Withdrawal Rate</span><strong><span id="v-swr">4.0</span>%</strong></div><input type="range" id="sl-swr" min="2" max="6" step="0.1" value="4"></div>
-          <div class="sg"><div class="sr"><span>Current Age</span><strong><span id="v-age">38</span></strong></div><input type="range" id="sl-age" min="18" max="100" step="1" value="38"></div>
-          <div class="sg"><div class="sr"><span>Target Retirement Age</span><strong><span id="v-ret-age">65</span></strong></div><input type="range" id="sl-ret-age" min="40" max="100" step="1" value="65"></div>
-          <div class="sg"><div class="sr"><span>Life Expectancy</span><strong><span id="v-lifeexp">90</span></strong></div><input type="range" id="sl-lifeexp" min="65" max="120" step="1" value="90"></div>
+          <div class="sg"><div class="sr"><span>Current Net Worth</span><strong>$<span id="v-nw">0</span></strong></div><div class="sg-row"><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"><input type="number" id="sln-nw" class="numin" min="0" max="10000000" step="10000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span><strong>$<span id="v-exp">0</span></strong></div><div class="sg-row"><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"><input type="number" id="sln-exp" class="numin" min="0" max="1000000" step="5000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Safe Withdrawal Rate</span><strong><span id="v-swr">4.0</span>%</strong></div><div class="sg-row"><input type="range" id="sl-swr" min="2" max="6" step="0.1" value="4"><input type="number" id="sln-swr" class="numin" min="2" max="6" step="0.1" value="4"></div></div>
+          <div class="sg"><div class="sr"><span>Current Age</span><strong><span id="v-age">38</span></strong></div><div class="sg-row"><input type="range" id="sl-age" min="18" max="100" step="1" value="38"><input type="number" id="sln-age" class="numin" min="18" max="100" step="1" value="38"></div></div>
+          <div class="sg"><div class="sr"><span>Target Retirement Age</span><strong><span id="v-ret-age">65</span></strong></div><div class="sg-row"><input type="range" id="sl-ret-age" min="40" max="100" step="1" value="65"><input type="number" id="sln-ret-age" class="numin" min="40" max="100" step="1" value="65"></div></div>
+          <div class="sg"><div class="sr"><span>Life Expectancy</span><strong><span id="v-lifeexp">90</span></strong></div><div class="sg-row"><input type="range" id="sl-lifeexp" min="65" max="120" step="1" value="90"><input type="number" id="sln-lifeexp" class="numin" min="65" max="120" step="1" value="90"></div></div>
         </div>
         <div class="div"></div>
         <div class="sec">Annual Savings<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:200px">
-          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span><strong>$<span id="v-lon">0</span></strong></div><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"></div>
+          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span><strong>$<span id="v-lon">0</span></strong></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
         </div>
       </div>
 
@@ -835,16 +838,16 @@ input[type=range]::-moz-range-thumb{
         <div class="sec-wrap" style="max-height:300px">
           <div class="sg">
             <div class="sr"><span>Nominal Annual Return</span><strong><span id="v-ret">8.8</span>%</strong></div>
-            <input type="range" id="sl-ret" min="2" max="14" step="0.1" value="8.8">
+            <div class="sg-row"><input type="range" id="sl-ret" min="2" max="14" step="0.1" value="8.8"><input type="number" id="sln-ret" class="numin" min="2" max="14" step="0.1" value="8.8"></div>
             <div style="font-size:10px;color:var(--mu);margin-top:3px">Real return (used in model): <span id="v-realret">5.8</span>%</div>
           </div>
           <div class="sg">
             <div class="sr"><span>Return Volatility (σ)</span><strong><span id="v-vol">12.9</span>%</strong></div>
-            <input type="range" id="sl-vol" min="5" max="30" step="0.1" value="12.9">
+            <div class="sg-row"><input type="range" id="sl-vol" min="5" max="30" step="0.1" value="12.9"><input type="number" id="sln-vol" class="numin" min="5" max="30" step="0.1" value="12.9"></div>
           </div>
           <div class="sg">
             <div class="sr"><span>Inflation Rate</span><strong><span id="v-inf">3.0</span>%</strong></div>
-            <input type="range" id="sl-inf" min="0" max="8" step="0.25" value="3">
+            <div class="sg-row"><input type="range" id="sl-inf" min="0" max="8" step="0.25" value="3"><input type="number" id="sln-inf" class="numin" min="0" max="8" step="0.25" value="3"></div>
           </div>
         </div>
       </div>
@@ -1689,6 +1692,30 @@ function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 80); }
 ['sl-ret','sl-vol','sl-inf','sl-nw','sl-exp','sl-swr',
  'sl-age','sl-ret-age','sl-lifeexp','sl-lon','sl-sims']
   .forEach(id => document.getElementById(id).addEventListener('input', schedule));
+
+// Keep each "Your Numbers" / "Market Assumptions" slider in sync with its
+// paired type-in number input (mirrors the pattern used by Card A/D).
+function linkNumberInput(sliderId, numId) {
+  const slider = document.getElementById(sliderId);
+  const num = document.getElementById(numId);
+  if (!slider || !num) return;
+  slider.addEventListener('input', () => { num.value = slider.value; });
+  num.addEventListener('input', () => {
+    // Don't reflect back into num.value here — doing so stomps on
+    // in-progress typing (e.g. a trailing "." while entering a decimal).
+    const v = Math.min(+slider.max, Math.max(+slider.min, +num.value || 0));
+    slider.value = v;
+    schedule();
+  });
+  // Range inputs silently snap to the nearest `step` — reconcile the
+  // number field to that actual value once the user commits (blur/Enter),
+  // so it never shows a number the model isn't really using.
+  num.addEventListener('change', () => { num.value = slider.value; });
+}
+[['sl-nw','sln-nw'], ['sl-exp','sln-exp'], ['sl-swr','sln-swr'], ['sl-age','sln-age'],
+ ['sl-ret-age','sln-ret-age'], ['sl-lifeexp','sln-lifeexp'], ['sl-lon','sln-lon'],
+ ['sl-ret','sln-ret'], ['sl-vol','sln-vol'], ['sl-inf','sln-inf']]
+  .forEach(([sliderId, numId]) => linkNumberInput(sliderId, numId));
 ['sl-slowgo','sl-slowgo-pct','sl-nogo','sl-nogo-pct']
   .forEach(id => document.getElementById(id).addEventListener('input', schedule));
 ['sl-ssamt','sl-ssage','sl-ss2amt','sl-ss2age']
