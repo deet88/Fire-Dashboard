@@ -174,6 +174,7 @@ canvas{display:block;width:100%;height:100%}
 .sg-row{display:flex;align-items:center;gap:8px}
 .sg-row input[type=range]{flex:1}
 .numin{width:84px;padding:3px 5px;font-size:11px;border:1px solid var(--bdr);border-radius:4px;background:var(--sur2);color:var(--txt);font-family:inherit}
+.numin-affix{font-size:11px;color:var(--mu);flex-shrink:0}
 
 input[type=range]{
   -webkit-appearance:none;width:100%;height:3px;
@@ -532,6 +533,15 @@ input[type=range]::-moz-range-thumb{
 .p2-card-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;user-select:none}
 .p2-drag-handle{color:var(--mu2);font-size:16px;line-height:1;cursor:grab;flex-shrink:0;transition:color var(--dur-fast) var(--ease)}
 .p2-drag-handle:hover{color:var(--mu)}
+.p2-reorder{display:flex;flex-direction:column;flex-shrink:0}
+.p2-reorder-btn{
+  background:none;border:none;color:var(--mu2);cursor:pointer;
+  font-size:9px;line-height:1;padding:2px 4px;font-family:inherit;
+  border-radius:3px;transition:color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease);
+}
+.p2-reorder-btn:hover:not(:disabled){color:var(--txt);background:var(--sur2)}
+.p2-reorder-btn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.p2-reorder-btn:disabled{color:var(--bdr);cursor:default}
 .p2-card-meta{flex:1;min-width:0}
 .p2-card-name{font-size:12.5px;font-weight:600;color:var(--txt)}
 .p2-card-desc{font-size:10.5px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -811,9 +821,9 @@ input[type=range]::-moz-range-thumb{
       <div class="panel">
         <div class="sec">Your Numbers<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:600px">
-          <div class="sg"><div class="sr"><span>Current Net Worth</span></div><div class="sg-row"><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"><input type="number" id="sln-nw" class="numin" min="0" max="10000000" step="10000" value="0"></div></div>
-          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span></div><div class="sg-row"><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"><input type="number" id="sln-exp" class="numin" min="0" max="1000000" step="5000" value="0"></div></div>
-          <div class="sg"><div class="sr"><span>Safe Withdrawal Rate</span></div><div class="sg-row"><input type="range" id="sl-swr" min="2" max="6" step="0.1" value="4"><input type="number" id="sln-swr" class="numin" min="2" max="6" step="0.1" value="4"></div></div>
+          <div class="sg"><div class="sr"><span>Current Net Worth</span></div><div class="sg-row"><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"><span class="numin-affix">$</span><input type="number" id="sln-nw" class="numin" min="0" max="10000000" step="10000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span></div><div class="sg-row"><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"><span class="numin-affix">$</span><input type="number" id="sln-exp" class="numin" min="0" max="1000000" step="5000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Safe Withdrawal Rate</span></div><div class="sg-row"><input type="range" id="sl-swr" min="2" max="6" step="0.1" value="4"><input type="number" id="sln-swr" class="numin" min="2" max="6" step="0.1" value="4"><span class="numin-affix">%</span></div></div>
           <div class="sg"><div class="sr"><span>Current Age</span></div><div class="sg-row"><input type="range" id="sl-age" min="18" max="100" step="1" value="38"><input type="number" id="sln-age" class="numin" min="18" max="100" step="1" value="38"></div></div>
           <div class="sg"><div class="sr"><span>Target Retirement Age</span></div><div class="sg-row"><input type="range" id="sl-ret-age" min="40" max="100" step="1" value="65"><input type="number" id="sln-ret-age" class="numin" min="40" max="100" step="1" value="65"></div></div>
           <div class="sg"><div class="sr"><span>Life Expectancy</span></div><div class="sg-row"><input type="range" id="sl-lifeexp" min="65" max="120" step="1" value="90"><input type="number" id="sln-lifeexp" class="numin" min="65" max="120" step="1" value="90"></div></div>
@@ -821,7 +831,7 @@ input[type=range]::-moz-range-thumb{
         <div class="div"></div>
         <div class="sec">Annual Savings<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:200px">
-          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><span class="numin-affix">$</span><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
         </div>
       </div>
 
@@ -831,16 +841,16 @@ input[type=range]::-moz-range-thumb{
         <div class="sec-wrap" style="max-height:300px">
           <div class="sg">
             <div class="sr"><span>Nominal Annual Return</span></div>
-            <div class="sg-row"><input type="range" id="sl-ret" min="2" max="14" step="0.1" value="8.8"><input type="number" id="sln-ret" class="numin" min="2" max="14" step="0.1" value="8.8"></div>
+            <div class="sg-row"><input type="range" id="sl-ret" min="2" max="14" step="0.1" value="8.8"><input type="number" id="sln-ret" class="numin" min="2" max="14" step="0.1" value="8.8"><span class="numin-affix">%</span></div>
             <div style="font-size:10px;color:var(--mu);margin-top:3px">Real return (used in model): <span id="v-realret">5.8</span>%</div>
           </div>
           <div class="sg">
             <div class="sr"><span>Return Volatility (σ)</span></div>
-            <div class="sg-row"><input type="range" id="sl-vol" min="5" max="30" step="0.1" value="12.9"><input type="number" id="sln-vol" class="numin" min="5" max="30" step="0.1" value="12.9"></div>
+            <div class="sg-row"><input type="range" id="sl-vol" min="5" max="30" step="0.1" value="12.9"><input type="number" id="sln-vol" class="numin" min="5" max="30" step="0.1" value="12.9"><span class="numin-affix">%</span></div>
           </div>
           <div class="sg">
             <div class="sr"><span>Inflation Rate</span></div>
-            <div class="sg-row"><input type="range" id="sl-inf" min="0" max="8" step="0.25" value="3"><input type="number" id="sln-inf" class="numin" min="0" max="8" step="0.25" value="3"></div>
+            <div class="sg-row"><input type="range" id="sl-inf" min="0" max="8" step="0.25" value="3"><input type="number" id="sln-inf" class="numin" min="0" max="8" step="0.25" value="3"><span class="numin-affix">%</span></div>
           </div>
         </div>
         <div class="div"></div>
@@ -2333,19 +2343,21 @@ function renderBodyA() {
       <div class="sg">
         <div class="sr"><span>${isSabbatical?'Annual Expenses (that year)':'Fixed annual expense ($)'}</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="0" max="500000" step="5000" value="${e.budget || (isSabbatical?80000:10000)}" style="flex:1"
+          <input type="range" id="p2a-bgt-r-${i}" min="0" max="500000" step="5000" value="${e.budget || (isSabbatical?80000:10000)}" style="flex:1"
             oninput="p2State.events[${i}].budget=+this.value;document.getElementById('p2a-bgtn-${i}').value=this.value;saveP2State();schedule()">
+          <span class="numin-affix">$</span>
           <input type="number" id="p2a-bgtn-${i}" min="0" max="500000" step="5000" value="${e.budget || (isSabbatical?80000:10000)}" style="width:92px;${numStyle}"
-            oninput="const v=Math.min(500000,Math.max(0,+this.value||0));p2State.events[${i}].budget=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(500000,Math.max(0,+this.value||0));p2State.events[${i}].budget=v;document.getElementById('p2a-bgt-r-${i}').value=v;saveP2State();schedule()">
         </div>
       </div>` : `
       <div class="sg">
         <div class="sr"><span>${pctLabel}</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="0" max="100" step="1" value="${e.pct}" style="flex:1"
+          <input type="range" id="p2a-pct-r-${i}" min="0" max="100" step="1" value="${e.pct}" style="flex:1"
             oninput="p2State.events[${i}].pct=+this.value;document.getElementById('p2a-pctn-${i}').value=this.value;saveP2State();schedule()">
           <input type="number" id="p2a-pctn-${i}" min="0" max="100" step="1" value="${e.pct}" style="width:56px;${numStyle}"
-            oninput="const v=Math.min(100,Math.max(0,+this.value||0));p2State.events[${i}].pct=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(100,Math.max(0,+this.value||0));p2State.events[${i}].pct=v;document.getElementById('p2a-pct-r-${i}').value=v;saveP2State();schedule()">
+          <span class="numin-affix">%</span>
         </div>
         ${kidsNote}${raiseNote}
       </div>`;
@@ -2457,6 +2469,7 @@ function renderBodyC() {
       <div class="sg-row">
         <input type="range" id="p2c-ssamt" min="0" max="60000" step="1000" value="${d.ssAmt}"
           oninput="p2State.data['C'].ssAmt=+this.value;document.getElementById('p2c-ssamt-n').value=this.value;saveP2State();schedule()">
+        <span class="numin-affix">$</span>
         <input type="number" id="p2c-ssamt-n" class="numin" min="0" max="60000" step="1000" value="${d.ssAmt}"
           oninput="const v=Math.min(60000,Math.max(0,+this.value||0));p2State.data['C'].ssAmt=v;document.getElementById('p2c-ssamt').value=v;saveP2State();schedule()">
       </div>
@@ -2481,6 +2494,7 @@ function renderBodyC() {
         <div class="sg-row">
           <input type="range" id="p2c-ss2amt" min="0" max="60000" step="1000" value="${d.ss2Amt}"
             oninput="p2State.data['C'].ss2Amt=+this.value;document.getElementById('p2c-ss2amt-n').value=this.value;saveP2State();schedule()">
+          <span class="numin-affix">$</span>
           <input type="number" id="p2c-ss2amt-n" class="numin" min="0" max="60000" step="1000" value="${d.ss2Amt}"
             oninput="const v=Math.min(60000,Math.max(0,+this.value||0));p2State.data['C'].ss2Amt=v;document.getElementById('p2c-ss2amt').value=v;saveP2State();schedule()">
         </div>
@@ -2518,10 +2532,11 @@ function renderBodyD() {
       <div class="sg">
         <div class="sr"><span>Amount</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="0" max="5000000" step="50000" value="${w.amt}" style="flex:1"
+          <input type="range" id="p2d-amt-r-${i}" min="0" max="5000000" step="50000" value="${w.amt}" style="flex:1"
             oninput="p2State.data['D'].windfalls[${i}].amt=+this.value;document.getElementById('p2d-amtn-${i}').value=this.value;saveP2State();schedule()">
+          <span class="numin-affix">$</span>
           <input type="number" id="p2d-amtn-${i}" min="0" max="5000000" step="50000" value="${w.amt}" class="numin" style="width:92px"
-            oninput="const v=Math.min(5000000,Math.max(0,+this.value||0));p2State.data['D'].windfalls[${i}].amt=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+            oninput="const v=Math.min(5000000,Math.max(0,+this.value||0));p2State.data['D'].windfalls[${i}].amt=v;document.getElementById('p2d-amt-r-${i}').value=v;saveP2State();schedule()">
         </div>
       </div>
       <div class="sg">
@@ -2564,6 +2579,7 @@ function renderBodyE() {
           oninput="p2State.data['E'].slowGoMult=+this.value/100;document.getElementById('p2e-sgm-n').value=this.value;saveP2State();schedule()">
         <input type="number" id="p2e-sgm-n" class="numin" min="40" max="100" step="5" value="${Math.round(d.slowGoMult*100)}"
           oninput="const v=Math.min(100,Math.max(40,+this.value||40));p2State.data['E'].slowGoMult=v/100;document.getElementById('p2e-sgm').value=v;saveP2State();schedule()">
+        <span class="numin-affix">%</span>
       </div>
     </div>
     <div class="sg">
@@ -2582,6 +2598,7 @@ function renderBodyE() {
           oninput="p2State.data['E'].noGoMult=+this.value/100;document.getElementById('p2e-ngm-n').value=this.value;saveP2State();schedule()">
         <input type="number" id="p2e-ngm-n" class="numin" min="30" max="100" step="5" value="${Math.round(d.noGoMult*100)}"
           oninput="const v=Math.min(100,Math.max(30,+this.value||30));p2State.data['E'].noGoMult=v/100;document.getElementById('p2e-ngm').value=v;saveP2State();schedule()">
+        <span class="numin-affix">%</span>
       </div>
     </div>`;
 }
@@ -2680,7 +2697,7 @@ function renderP2() {
     .map(id => P2_CARDS.find(c => c.id === id))
     .filter(Boolean);
 
-  for (const card of ordered) {
+  ordered.forEach((card, idx) => {
     const isActive = !!p2State.active[card.id];
     const el = document.createElement('div');
     el.className = 'p2-card' + (isActive ? ' p2-active' : '');
@@ -2690,6 +2707,12 @@ function renderP2() {
     el.innerHTML = `
       <div class="p2-card-hdr">
         <span class="p2-drag-handle" title="Drag to reorder">⠿</span>
+        <div class="p2-reorder">
+          <button type="button" class="p2-reorder-btn" title="Move up" aria-label="Move ${card.title} up"
+            onclick="p2MoveCard('${card.id}',-1)" ${idx===0?'disabled':''}>▲</button>
+          <button type="button" class="p2-reorder-btn" title="Move down" aria-label="Move ${card.title} down"
+            onclick="p2MoveCard('${card.id}',1)" ${idx===ordered.length-1?'disabled':''}>▼</button>
+        </div>
         <div class="p2-card-meta">
           <div class="p2-card-name">${card.title}</div>
           <div class="p2-card-desc">${card.desc}</div>
@@ -2722,7 +2745,7 @@ function renderP2() {
     });
 
     container.appendChild(el);
-  }
+  });
 }
 
 // ── Toggle handler ────────────────────────────────────────────
@@ -2880,6 +2903,19 @@ function p2SetCountry(code) {
   saveP2State();
   renderP2();
   schedule();
+}
+
+// ── Keyboard-accessible reorder (mouse-only drag-and-drop otherwise
+// leaves keyboard users with no way to reorder Phase 2 cards) ──
+function p2MoveCard(id, dir) {
+  const order = [...p2State.order];
+  const idx = order.indexOf(id);
+  const newIdx = idx + dir;
+  if (idx < 0 || newIdx < 0 || newIdx >= order.length) return;
+  [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
+  p2State.order = order;
+  saveP2State();
+  renderP2();
 }
 
 // ── Drag-and-drop ─────────────────────────────────────────────
