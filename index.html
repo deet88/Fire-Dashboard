@@ -553,7 +553,7 @@ input[type=range]::-moz-range-thumb{
 .p2-exp-total{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:8px 10px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r-sm);font-size:12px}
 .p2-exp-total-val{font-weight:700;font-variant-numeric:tabular-nums}
 .p2-exp-delta{font-size:10.5px;margin-top:4px;text-align:right}
-.p2-exp-delta.pos{color:var(--red)}.p2-exp-delta.neg{color:var(--green)}
+.p2-exp-delta.pos{color:var(--red)}.p2-exp-delta.neg{color:var(--green)}.p2-exp-delta.neutral{color:var(--mu)}
 .p2-mult-row{display:flex;gap:6px;margin-top:10px}
 .p2-mult-btn{flex:1;padding:6px 4px;font-size:11.5px;font-family:inherit;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r-sm);color:var(--mu);cursor:pointer;transition:all var(--dur-fast) var(--ease)}
 .p2-mult-btn:hover{border-color:var(--bdr-hover);color:var(--txt)}
@@ -647,7 +647,7 @@ input[type=range]::-moz-range-thumb{
         <label class="q-label" for="q-age">1. How old are you today?</label>
         <div class="q-tooltip-wrap"><span class="q-tip-icon">?</span><div class="q-tooltip-bubble">This is your starting point for all projections.</div></div>
       </div>
-      <input type="number" id="q-age" class="q-input" placeholder="e.g. 35" min="18" max="100" value="35">
+      <input type="number" id="q-age" class="q-input" placeholder="e.g. 35" min="18" max="100">
       <div class="q-error" id="err-age"></div>
     </div>
 
@@ -685,7 +685,7 @@ input[type=range]::-moz-range-thumb{
           <option>CAD</option><option>AUD</option><option>CHF</option>
           <option>SGD</option><option>INR</option><option>JPY</option>
         </select>
-        <input type="number" id="q-nw" class="q-input" placeholder="e.g. 500000" min="0" value="100000">
+        <input type="number" id="q-nw" class="q-input" placeholder="e.g. 500000" min="0">
       </div>
       <div class="q-helper">Not sure? Try: (Retirement accounts) + (Savings) + (Home equity) − (Debt)</div>
       <div class="q-error" id="err-nw"></div>
@@ -703,7 +703,7 @@ input[type=range]::-moz-range-thumb{
           <option>CAD</option><option>AUD</option><option>CHF</option>
           <option>SGD</option><option>INR</option><option>JPY</option>
         </select>
-        <input type="number" id="q-exp" class="q-input" placeholder="e.g. 60000" min="0" value="50000">
+        <input type="number" id="q-exp" class="q-input" placeholder="e.g. 60000" min="0">
       </div>
       <div class="q-helper">Not sure? Estimate 60–80% of your current pre-tax income.</div>
       <div class="q-error" id="err-exp"></div>
@@ -721,7 +721,7 @@ input[type=range]::-moz-range-thumb{
           <option>CAD</option><option>AUD</option><option>CHF</option>
           <option>SGD</option><option>INR</option><option>JPY</option>
         </select>
-        <input type="number" id="q-save" class="q-input" placeholder="e.g. 30000" min="0" value="0">
+        <input type="number" id="q-save" class="q-input" placeholder="e.g. 30000" min="0">
       </div>
       <div class="q-helper">Include 401k/IRA contributions, employer match, and any additional savings.</div>
       <div class="q-error" id="err-save"></div>
@@ -818,17 +818,17 @@ input[type=range]::-moz-range-thumb{
       <div class="panel">
         <div class="sec">Your Numbers<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:600px">
-          <div class="sg"><div class="sr"><span>Current Net Worth</span><strong>$<span id="v-nw">0</span></strong></div><div class="sg-row"><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"><input type="number" id="sln-nw" class="numin" min="0" max="10000000" step="10000" value="0"></div></div>
-          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span><strong>$<span id="v-exp">0</span></strong></div><div class="sg-row"><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"><input type="number" id="sln-exp" class="numin" min="0" max="1000000" step="5000" value="0"></div></div>
-          <div class="sg"><div class="sr"><span>Safe Withdrawal Rate</span><strong><span id="v-swr">4.0</span>%</strong></div><div class="sg-row"><input type="range" id="sl-swr" min="2" max="6" step="0.1" value="4"><input type="number" id="sln-swr" class="numin" min="2" max="6" step="0.1" value="4"></div></div>
-          <div class="sg"><div class="sr"><span>Current Age</span><strong><span id="v-age">38</span></strong></div><div class="sg-row"><input type="range" id="sl-age" min="18" max="100" step="1" value="38"><input type="number" id="sln-age" class="numin" min="18" max="100" step="1" value="38"></div></div>
-          <div class="sg"><div class="sr"><span>Target Retirement Age</span><strong><span id="v-ret-age">65</span></strong></div><div class="sg-row"><input type="range" id="sl-ret-age" min="40" max="100" step="1" value="65"><input type="number" id="sln-ret-age" class="numin" min="40" max="100" step="1" value="65"></div></div>
-          <div class="sg"><div class="sr"><span>Life Expectancy</span><strong><span id="v-lifeexp">90</span></strong></div><div class="sg-row"><input type="range" id="sl-lifeexp" min="65" max="120" step="1" value="90"><input type="number" id="sln-lifeexp" class="numin" min="65" max="120" step="1" value="90"></div></div>
+          <div class="sg"><div class="sr"><span>Current Net Worth</span></div><div class="sg-row"><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"><input type="number" id="sln-nw" class="numin" min="0" max="10000000" step="10000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span></div><div class="sg-row"><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"><input type="number" id="sln-exp" class="numin" min="0" max="1000000" step="5000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Safe Withdrawal Rate</span></div><div class="sg-row"><input type="range" id="sl-swr" min="2" max="6" step="0.1" value="4"><input type="number" id="sln-swr" class="numin" min="2" max="6" step="0.1" value="4"></div></div>
+          <div class="sg"><div class="sr"><span>Current Age</span></div><div class="sg-row"><input type="range" id="sl-age" min="18" max="100" step="1" value="38"><input type="number" id="sln-age" class="numin" min="18" max="100" step="1" value="38"></div></div>
+          <div class="sg"><div class="sr"><span>Target Retirement Age</span></div><div class="sg-row"><input type="range" id="sl-ret-age" min="40" max="100" step="1" value="65"><input type="number" id="sln-ret-age" class="numin" min="40" max="100" step="1" value="65"></div></div>
+          <div class="sg"><div class="sr"><span>Life Expectancy</span></div><div class="sg-row"><input type="range" id="sl-lifeexp" min="65" max="120" step="1" value="90"><input type="number" id="sln-lifeexp" class="numin" min="65" max="120" step="1" value="90"></div></div>
         </div>
         <div class="div"></div>
         <div class="sec">Annual Savings<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:200px">
-          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span><strong>$<span id="v-lon">0</span></strong></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
         </div>
       </div>
 
@@ -837,16 +837,16 @@ input[type=range]::-moz-range-thumb{
         <div class="sec">Market Assumptions<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:300px">
           <div class="sg">
-            <div class="sr"><span>Nominal Annual Return</span><strong><span id="v-ret">8.8</span>%</strong></div>
+            <div class="sr"><span>Nominal Annual Return</span></div>
             <div class="sg-row"><input type="range" id="sl-ret" min="2" max="14" step="0.1" value="8.8"><input type="number" id="sln-ret" class="numin" min="2" max="14" step="0.1" value="8.8"></div>
             <div style="font-size:10px;color:var(--mu);margin-top:3px">Real return (used in model): <span id="v-realret">5.8</span>%</div>
           </div>
           <div class="sg">
-            <div class="sr"><span>Return Volatility (σ)</span><strong><span id="v-vol">12.9</span>%</strong></div>
+            <div class="sr"><span>Return Volatility (σ)</span></div>
             <div class="sg-row"><input type="range" id="sl-vol" min="5" max="30" step="0.1" value="12.9"><input type="number" id="sln-vol" class="numin" min="5" max="30" step="0.1" value="12.9"></div>
           </div>
           <div class="sg">
-            <div class="sr"><span>Inflation Rate</span><strong><span id="v-inf">3.0</span>%</strong></div>
+            <div class="sr"><span>Inflation Rate</span></div>
             <div class="sg-row"><input type="range" id="sl-inf" min="0" max="8" step="0.25" value="3"><input type="number" id="sln-inf" class="numin" min="0" max="8" step="0.25" value="3"></div>
           </div>
         </div>
@@ -1116,7 +1116,10 @@ function pct(sorted, p) {
 function runSim(p) {
   const startYr  = 2026;
   const retireYr = startYr + Math.max(0, p.retireAge - p.currentAge);
-  const endYr    = startYr + (p.lifeExp - p.currentAge);
+  // Guard against lifeExp <= currentAge (e.g. a corrupted/edge-case input that
+  // slips past the UI's own ordering enforcement) — without this, endYr < startYr
+  // and `years` comes out empty, which cascades into "$undefined" stats and a blank chart.
+  const endYr    = startYr + Math.max(1, p.lifeExp - p.currentAge);
   const years    = [];
   for (let y=startYr; y<=endYr; y++) years.push(y);
 
@@ -1216,7 +1219,12 @@ function drawChart(sim, thr, opts) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const pad = { top:20, right:120, bottom:36, left:66 };
+  // Below ~500px there's no room for the right-side threshold/scenario name
+  // labels without them overlapping each other — drop them and reclaim the
+  // space for the plot itself; the legend + FIRE Status list already show
+  // the same thresholds legibly.
+  const showRightLabels = W >= 500;
+  const pad = { top:20, right: showRightLabels ? 120 : 20, bottom:36, left:66 };
   const pW  = W - pad.left - pad.right;
   const pH  = H - pad.top  - pad.bottom;
   const {years, p10, p25, p50, p75, p90} = sim;
@@ -1257,10 +1265,16 @@ function drawChart(sim, thr, opts) {
     ctx.fillText(v>=1e6 ? '$'+(v/1e6).toFixed(1)+'M' : '$'+(v/1e3).toFixed(0)+'K', pad.left-5, y+3.5);
   }
 
-  // Vertical grid lines + X labels
+  // Vertical grid lines + X labels — tick stride grows on narrow charts so
+  // labels never overlap (fixed "every 5 years" was fine on desktop but
+  // packed ~10 labels into a mobile-width canvas and they smashed together).
   ctx.textAlign = 'center';
+  const minPxPerLabel = 44;
+  const maxTicks = Math.max(2, Math.floor(pW / minPxPerLabel));
+  const yearSpan = years[n-1] - years[0];
+  const stride = Math.max(5, Math.ceil(yearSpan / maxTicks / 5) * 5);
   for (let i=0; i<n; i++) {
-    if (years[i] % 5 !== 0) continue;
+    if (years[i] % stride !== 0) continue;
     const x = xAt(i);
     ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top+pH); ctx.stroke();
     ctx.fillText(years[i], x, pad.top+pH+16);
@@ -1309,7 +1323,7 @@ function drawChart(sim, thr, opts) {
       line(years.map(()=>t.thr), t.color, 1.5, [6,4]);
       // label at right edge
       const y = yAt(t.thr);
-      if (y >= pad.top && y <= pad.top+pH) {
+      if (showRightLabels && y >= pad.top && y <= pad.top+pH) {
         ctx.save();
         ctx.fillStyle = t.color;
         ctx.font = '10px system-ui';
@@ -1400,7 +1414,7 @@ function drawChart(sim, thr, opts) {
     // Label at right edge
     const lastYr = sc.years[sc.years.length-1];
     const lastIdx = years.indexOf(lastYr);
-    if (lastIdx >= 0) {
+    if (showRightLabels && lastIdx >= 0) {
       ctx.fillStyle = 'rgba(139,148,158,0.8)';
       ctx.font = '10px system-ui';
       ctx.textAlign = 'left';
@@ -1587,17 +1601,7 @@ function getP() {
   return p;
 }
 function updateLabels(p) {
-  document.getElementById('v-ret').textContent     = (+document.getElementById('sl-ret').value).toFixed(1);
-  document.getElementById('v-vol').textContent     = (+document.getElementById('sl-vol').value).toFixed(1);
-  document.getElementById('v-inf').textContent     = (+document.getElementById('sl-inf').value).toFixed(2);
   document.getElementById('v-realret').textContent = (p.ret*100).toFixed(1);
-  document.getElementById('v-nw').textContent      = fmtC(p.currentNW);
-  document.getElementById('v-exp').textContent     = fmtC(p.expenses);
-  document.getElementById('v-swr').textContent     = p.swr.toFixed(1);
-  document.getElementById('v-age').textContent     = p.currentAge;
-  document.getElementById('v-ret-age').textContent = p.retireAge;
-  document.getElementById('v-lifeexp').textContent  = p.lifeExp;
-  document.getElementById('v-lon').textContent     = fmtC(p.londonSave);
   document.getElementById('v-sims').textContent    = p.numSims;
   document.getElementById('sim-count').textContent = p.numSims;
   document.getElementById('sim-badge').textContent = p.numSims+' sims';
@@ -1716,6 +1720,32 @@ function linkNumberInput(sliderId, numId) {
  ['sl-ret-age','sln-ret-age'], ['sl-lifeexp','sln-lifeexp'], ['sl-lon','sln-lon'],
  ['sl-ret','sln-ret'], ['sl-vol','sln-vol'], ['sl-inf','sln-inf']]
   .forEach(([sliderId, numId]) => linkNumberInput(sliderId, numId));
+
+// Current Age < Retirement Age < Life Expectancy must always hold — the
+// questionnaire already enforces this on submit, but the live sliders/number
+// inputs didn't, so a nonsensical combination (e.g. retire age <= current age)
+// could reach the sim and render "$undefined" / a blank chart. Auto-bump the
+// dependent field up rather than blocking input, since these controls update
+// live with no submit step.
+function enforceAgeOrder() {
+  const ageEl = document.getElementById('sl-age'),      ageNum = document.getElementById('sln-age');
+  const retEl = document.getElementById('sl-ret-age'),  retNum = document.getElementById('sln-ret-age');
+  const lifeEl = document.getElementById('sl-lifeexp'), lifeNum = document.getElementById('sln-lifeexp');
+  const age = +ageEl.value;
+  let ret = +retEl.value;
+  if (ret <= age) {
+    ret = Math.min(+retEl.max, age + 1);
+    retEl.value = ret; retNum.value = ret;
+  }
+  let life = +lifeEl.value;
+  if (life <= ret) {
+    life = Math.min(+lifeEl.max, ret + 1);
+    lifeEl.value = life; lifeNum.value = life;
+  }
+  schedule();
+}
+['sl-age','sl-ret-age','sl-lifeexp','sln-age','sln-ret-age','sln-lifeexp']
+  .forEach(id => document.getElementById(id).addEventListener('input', enforceAgeOrder));
 ['sl-slowgo','sl-slowgo-pct','sl-nogo','sl-nogo-pct']
   .forEach(id => document.getElementById(id).addEventListener('input', schedule));
 ['sl-ssamt','sl-ssage','sl-ss2amt','sl-ss2age']
@@ -2360,8 +2390,12 @@ function renderBodyB() {
   const total   = FIELDS.reduce((s,[k]) => s + (parseFloat(d[k]) || 0), 0);
   const adjusted = total * p2State.expMult;
   const delta    = adjusted - baseExp;
-  const deltaStr = (delta >= 0 ? '+' : '') + fmtC(delta);
-  const deltaClass = delta > 0 ? 'pos' : 'neg';
+  // p2ApplyOverrides() only swaps in the category breakdown once total > 0 —
+  // until then the sim keeps using Phase 1's expenses, so the delta line must
+  // say that instead of implying the model just switched to $0 spending.
+  const deltaStr = total > 0 ? (delta >= 0 ? '+' : '') + fmtC(delta) + ' vs Phase 1 ($' + fmtC(baseExp) + ')'
+                             : 'Enter your expenses below — currently using Phase 1’s $' + fmtC(baseExp);
+  const deltaClass = total > 0 ? (delta > 0 ? 'pos' : 'neg') : 'neutral';
 
   const grid = FIELDS.map(([k,lbl]) => `
     <div class="p2-exp-item">
@@ -2380,7 +2414,7 @@ function renderBodyB() {
       <span>Annual total</span>
       <span class="p2-exp-total-val" id="p2b-total">$${fmtC(adjusted)}</span>
     </div>
-    <div class="p2-exp-delta ${deltaClass}" id="p2b-delta">${deltaStr} vs Phase 1 ($${fmtC(baseExp)})</div>
+    <div class="p2-exp-delta ${deltaClass}" id="p2b-delta">${deltaStr}</div>
     <div style="font-size:10px;color:var(--mu);margin-top:8px">Retirement spending multiplier</div>
     <div class="p2-mult-row">${multBtns}</div>`;
 }
@@ -2684,8 +2718,9 @@ function p2UpdateExpTotal() {
   const dl = document.getElementById('p2b-delta');
   if (el) el.textContent = '$' + fmtC(adjusted);
   if (dl) {
-    dl.textContent  = (delta >= 0 ? '+' : '') + fmtC(delta) + ' vs Phase 1 ($' + fmtC(baseExp) + ')';
-    dl.className    = 'p2-exp-delta ' + (delta > 0 ? 'pos' : 'neg');
+    dl.textContent = total > 0 ? (delta >= 0 ? '+' : '') + fmtC(delta) + ' vs Phase 1 ($' + fmtC(baseExp) + ')'
+                               : 'Enter your expenses below — currently using Phase 1’s $' + fmtC(baseExp);
+    dl.className   = 'p2-exp-delta ' + (total > 0 ? (delta > 0 ? 'pos' : 'neg') : 'neutral');
   }
   saveP2State();
   schedule();
