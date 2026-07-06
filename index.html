@@ -1752,20 +1752,29 @@ function linkNumberInput(sliderId, numId) {
 // could reach the sim and render "$undefined" / a blank chart. Auto-bump the
 // dependent field up rather than blocking input, since these controls update
 // live with no submit step.
-function enforceAgeOrder() {
-  const ageEl = document.getElementById('sl-age'),      ageNum = document.getElementById('sln-age');
-  const retEl = document.getElementById('sl-ret-age'),  retNum = document.getElementById('sln-ret-age');
-  const lifeEl = document.getElementById('sl-lifeexp'), lifeNum = document.getElementById('sln-lifeexp');
+function enforceAgeOrder(e) {
+  const ageEl  = document.getElementById('sl-age');
+  const retEl  = document.getElementById('sl-ret-age'),  retNum  = document.getElementById('sln-ret-age');
+  const lifeEl = document.getElementById('sl-lifeexp'),  lifeNum = document.getElementById('sln-lifeexp');
+  // The field currently being typed into must not be overwritten mid-keystroke
+  // (e.g. clearing it to retype briefly dips below the other age, and writing
+  // the correction straight back would snap the field to a fixed number and
+  // make it look stuck) — but any OTHER number field affected by a cascading
+  // correction (dragging a slider, or editing a different field) should still
+  // update live, so it doesn't go stale until the user happens to touch it.
+  const activeEl = e && e.target;
   const age = +ageEl.value;
   let ret = +retEl.value;
   if (ret <= age) {
     ret = Math.min(+retEl.max, age + 1);
-    retEl.value = ret; retNum.value = ret;
+    retEl.value = ret;
+    if (activeEl !== retNum) retNum.value = ret;
   }
   let life = +lifeEl.value;
   if (life <= ret) {
     life = Math.min(+lifeEl.max, ret + 1);
-    lifeEl.value = life; lifeNum.value = life;
+    lifeEl.value = life;
+    if (activeEl !== lifeNum) lifeNum.value = life;
   }
   schedule();
 }
