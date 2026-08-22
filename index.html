@@ -1227,9 +1227,14 @@ function calcFire(expenses, swr, currentAge, retireAge, ret) {
   const yrs  = Math.max(0, retireAge - currentAge);
   const theme = currentTheme();
   const tc = key => TIER_COLORS[key][theme];
+  // Lean's multiplier must stay strictly below Barista's 0.4x for every possible
+  // `expenses` value, not just typical ones — every tier divides by the same swr,
+  // so that ratio is what determines dollar ordering between tiers.
+  // min(40000, expenses*0.35) <= expenses*0.35 < expenses*0.4 always, so Lean
+  // can never price out above Barista/Regular/Chubby/Fat.
   return [
     {key:'coast',  name:'Coast FIRE',  color:tc('coast'),  thr:fire/Math.pow(1+ret,yrs),       desc:'No more saving needed'},
-    {key:'lean',   name:'Lean FIRE',   color:tc('lean'),   thr:40000/(swr/100),                desc:'Frugal baseline · essentials only, fixed at $40K/yr'},
+    {key:'lean',   name:'Lean FIRE',   color:tc('lean'),   thr:Math.min(40000, expenses*0.35)/(swr/100), desc:'Frugal baseline · essentials only, up to $40K/yr'},
     {key:'barista',name:'Barista FIRE',color:tc('barista'),thr:expenses*0.4/(swr/100),          desc:'Part-time work covers 60% of expenses'},
     {key:'regular',name:'Regular FIRE',color:tc('regular'),thr:fire,                             desc:`Full retirement · 25× $${fmtC(expenses)}/yr`},
     {key:'chubby', name:'Chubby FIRE', color:tc('chubby'), thr:expenses*1.5/(swr/100),          desc:'Comfortable cushion · 1.5× your expenses'},
