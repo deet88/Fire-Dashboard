@@ -863,11 +863,11 @@ input[type=range]::-moz-range-thumb{
       <!-- Market Assumptions -->
       <div class="panel">
         <div class="sec">Market Assumptions<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
-        <div class="sec-wrap" style="max-height:300px">
+        <div class="sec-wrap" style="max-height:360px">
           <div class="sg">
             <div class="sr"><span>Nominal Annual Return</span></div>
             <div class="sg-row"><input type="range" id="sl-ret" min="2" max="14" step="0.1" value="8.8"><input type="number" id="sln-ret" class="numin" min="2" max="14" step="0.1" value="8.8"><span class="numin-affix">%</span></div>
-            <div style="font-size:10px;color:var(--mu);margin-top:3px">Real return (used in model): <span id="v-realret">5.8</span>%</div>
+            <div style="font-size:10px;color:var(--mu);margin-top:3px">Real return, median compounded (used in model): <span id="v-realret">5.8</span>%</div>
           </div>
           <div class="sg">
             <div class="sr"><span>Return Volatility (σ)</span></div>
@@ -876,6 +876,12 @@ input[type=range]::-moz-range-thumb{
           <div class="sg">
             <div class="sr"><span>Inflation Rate</span></div>
             <div class="sg-row"><input type="range" id="sl-inf" min="0" max="8" step="0.25" value="3"><input type="number" id="sln-inf" class="numin" min="0" max="8" step="0.25" value="3"><span class="numin-affix">%</span></div>
+          </div>
+          <div style="font-size:10px;color:var(--mu2);line-height:1.45;padding:6px 0 2px;border-top:1px solid var(--bdr);margin-top:4px">
+            Returns are resampled in 5-year runs from actual S&amp;P 500 history
+            (1928–2025), then recentred on the figures above. Crashes therefore
+            cluster the way they have historically, rather than arriving
+            independently — the risk that most often breaks an early retirement.
           </div>
         </div>
         <div class="div"></div>
@@ -1156,19 +1162,69 @@ function removeSab(i) {
 const fmtS = n => n >= 1e6 ? CUR+(n/1e6).toFixed(2)+'M' : n >= 1e3 ? CUR+(n/1e3).toFixed(0)+'K' : CUR+Math.round(n);
 const fmtC = n => Math.round(n).toLocaleString();
 
-function randN(m, s, z) {
-  if (z === undefined) {
-    let u=0, v=0;
-    while(!u) u=Math.random();
-    while(!v) v=Math.random();
-    z = Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
-  }
-  return m + s * z;
-}
-
 function pct(sorted, p) {
   const i=(p/100)*(sorted.length-1), lo=Math.floor(i), hi=Math.ceil(i);
   return lo===hi ? sorted[lo] : sorted[lo]+(i-lo)*(sorted[hi]-sorted[lo]);
+}
+
+// ── Historical return shape ────────────────────────────────────────────────────
+// S&P 500 annual total returns (nominal, %), 1928-2025.
+// Source: Aswath Damodaran, NYU Stern, "Historical Returns on Stocks, Bonds and
+// Bills" — pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html
+// Retrieved 2026-09-08; dataset last updated 2026-01-05.
+//
+// Only the SHAPE of this series is used. Every sampled block is recentred onto
+// the user's expected return and rescaled to their volatility (see drawReturns),
+// so the nominal-vs-real level of the source data is irrelevant and one series
+// serves all four risk profiles. What it contributes is precisely what an i.i.d.
+// normal draw cannot: a fat left tail, and crashes that arrive in runs.
+//
+// Known simplification: equity tail shape is borrowed for bond-heavy profiles
+// too. Their volatility is matched exactly, but their tails come out slightly
+// fatter than a real 60/40 would produce — conservative, not optimistic.
+const HIST_RETURNS = [
+  43.81, -8.30,-25.12,-43.84, -8.64, 49.98, -1.19, 46.74, 31.94,-35.34,
+  29.28, -1.10,-10.67,-12.77, 19.17, 25.06, 19.03, 35.82, -8.43,  5.20,
+   5.70, 18.30, 30.81, 23.68, 18.15, -1.21, 52.56, 32.60,  7.44,-10.46,
+  43.72, 12.06,  0.34, 26.64, -8.81, 22.61, 16.42, 12.40, -9.97, 23.80,
+  10.81, -8.24,  3.56, 14.22, 18.76,-14.31,-25.90, 37.00, 23.83, -6.98,
+   6.51, 18.52, 31.74, -4.70, 20.42, 22.34,  6.15, 31.24, 18.49,  5.81,
+  16.54, 31.48, -3.06, 30.23,  7.49,  9.97,  1.33, 37.20, 22.68, 33.10,
+  28.34, 20.89, -9.03,-11.85,-21.97, 28.36, 10.74,  4.83, 15.61,  5.48,
+ -36.55, 25.94, 14.82,  2.10, 15.89, 32.15, 13.52,  1.38, 11.77, 21.61,
+  -4.23, 31.21, 18.02, 28.47,-18.04, 26.06, 24.88, 17.78,
+];
+const HIST_LOG      = HIST_RETURNS.map(r => Math.log(1 + r/100));
+const HIST_LOG_MEAN = HIST_LOG.reduce((a,b) => a+b, 0) / HIST_LOG.length;
+const HIST_LOG_SD   = Math.sqrt(
+  HIST_LOG.reduce((a,l) => a + (l-HIST_LOG_MEAN)*(l-HIST_LOG_MEAN), 0) / HIST_LOG.length);
+const BLOCK_YRS = 5;   // block length — long enough to carry a crash-and-recovery run
+
+// One path's worth of annual real returns, by block bootstrap.
+//
+// Contiguous blocks preserve both the fat left tail and the serial clustering of
+// bad years (sequence-of-returns risk). Recentring happens in LOG space, which
+// makes `ret` the median compounded growth rate — i.e. the CAGR a user reading
+// "9.6% return" already assumes. The previous i.i.d. normal draw treated that
+// same figure as an arithmetic mean, double-counting volatility drag and
+// delivering a median ~1.1pp/yr below the advertised number.
+//
+// `us` carries shared uniforms (common random numbers) so lever comparisons
+// differ only by the parameter changed — one uniform per block, not per year.
+function drawReturns(p, n, us) {
+  const tgt   = Math.log(1 + p.ret);
+  const scale = HIST_LOG_SD > 0 ? p.vol / HIST_LOG_SD : 0;
+  const out   = [];
+  let k = 0;
+  while (out.length < n) {
+    const u = us ? us[k % us.length] : Math.random();
+    k++;
+    const s = Math.min(HIST_LOG.length - 1, Math.floor(u * HIST_LOG.length));
+    for (let b = 0; b < BLOCK_YRS && out.length < n; b++) {
+      out.push(Math.exp(tgt + (HIST_LOG[(s+b) % HIST_LOG.length] - HIST_LOG_MEAN) * scale) - 1);
+    }
+  }
+  return out;
 }
 
 // ── Simulation ─────────────────────────────────────────────────────────────────
@@ -1218,9 +1274,9 @@ function runSim(p) {
     let pf = p.currentNW;
     let broke = false;
     const t = [pf];
+    const rets = drawReturns(p, years.length - 1, p.shocks ? p.shocks[i] : null);
     for (let j=1; j<years.length; j++) {
-      const z = p.shocks ? p.shocks[i][j-1] : undefined;
-      const raw = pf*(1+randN(p.ret,p.vol,z)) + cf(years[j]) + inh(years[j]);
+      const raw = pf*(1+rets[j-1]) + cf(years[j]) + inh(years[j]);
       // Depleting during retirement is a permanent failure, even if a later
       // windfall revives the balance — the retiree was broke in between.
       if (raw <= 0 && years[j] >= retireYr) broke = true;
@@ -2114,12 +2170,15 @@ function computeSummary(data) {
   // Shared random draws for the baseline and every lever below (common random
   // numbers): each lever's delta then reflects the parameter change itself,
   // not fresh Monte Carlo sampling noise layered on top of it.
+  // These are uniforms picking block start points for drawReturns() — one per
+  // block rather than the per-year normal deviates the old i.i.d. draw needed.
   const n = 500;
   const nYears = data.lifeExp - data.currentAge;
+  const nBlocks = Math.ceil(nYears / BLOCK_YRS) + 1;
   const shocks = [];
   for (let i=0; i<n; i++) {
     const row = [];
-    for (let j=0; j<nYears; j++) row.push(randN(0,1));
+    for (let j=0; j<nBlocks; j++) row.push(Math.random());
     shocks.push(row);
   }
 
