@@ -794,8 +794,17 @@ input[type=range]::-moz-range-thumb{
   </div>
 </header>
 
+<!-- Shown only when phase1Data was saved in an earlier calendar year: ages are
+     stored as absolute numbers, so they quietly go stale as time passes. We
+     prompt rather than auto-incrementing — guessing at someone's age is worse
+     than asking. -->
+<div id="stale-banner" class="p2-banner" style="display:none;margin:0 0 12px">
+  <span id="stale-banner-text"></span>
+  <button class="p2-banner-accept" onclick="openPhase1()">Review inputs</button>
+</div>
+
 <div class="stat-bar">
-  <div class="sc"><div class="sc-lbl">Current Net Worth</div><div class="sc-val c-g" id="s-nw">—</div><div class="sc-sub">May 2026</div></div>
+  <div class="sc"><div class="sc-lbl">Current Net Worth</div><div class="sc-val c-g" id="s-nw">—</div><div class="sc-sub" id="s-nw-asof">—</div></div>
   <div class="sc"><div class="sc-lbl">Coast FIRE</div><div class="sc-val c-b" id="s-coast">—</div><div class="sc-sub" id="s-coast-sub">—</div></div>
   <div class="sc"><div class="sc-lbl">Regular FIRE (P50)</div><div class="sc-val c-p" id="s-regular">—</div><div class="sc-sub" id="s-regular-sub">—</div></div>
   <div class="sc"><div class="sc-lbl">P50 at Life Expectancy</div><div class="sc-val c-o" id="s-at65">—</div><div class="sc-sub" id="s-at65-sub">—</div></div>
@@ -837,8 +846,8 @@ input[type=range]::-moz-range-thumb{
       <div class="panel">
         <div class="sec">Your Numbers<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:600px">
-          <div class="sg"><div class="sr"><span>Current Net Worth</span></div><div class="sg-row"><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"><span class="numin-affix">$</span><input type="number" id="sln-nw" class="numin" min="0" max="10000000" step="10000" value="0"></div></div>
-          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span></div><div class="sg-row"><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"><span class="numin-affix">$</span><input type="number" id="sln-exp" class="numin" min="0" max="1000000" step="5000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Current Net Worth</span></div><div class="sg-row"><input type="range" id="sl-nw" min="0" max="10000000" step="10000" value="0"><span class="numin-affix" data-unit="cur">$</span><input type="number" id="sln-nw" class="numin" min="0" max="10000000" step="10000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Annual Retirement Expenses</span></div><div class="sg-row"><input type="range" id="sl-exp" min="0" max="1000000" step="5000" value="0"><span class="numin-affix" data-unit="cur">$</span><input type="number" id="sln-exp" class="numin" min="0" max="1000000" step="5000" value="0"></div></div>
           <div class="sg"><div class="sr"><span>Safe Withdrawal Rate</span></div><div class="sg-row"><input type="range" id="sl-swr" min="2" max="6" step="0.1" value="4"><input type="number" id="sln-swr" class="numin" min="2" max="6" step="0.1" value="4"><span class="numin-affix">%</span></div></div>
           <div class="sg"><div class="sr"><span>Current Age</span></div><div class="sg-row"><input type="range" id="sl-age" min="18" max="100" step="1" value="38"><input type="number" id="sln-age" class="numin" min="18" max="100" step="1" value="38"></div></div>
           <div class="sg"><div class="sr"><span>Target Retirement Age</span></div><div class="sg-row"><input type="range" id="sl-ret-age" min="40" max="100" step="1" value="65"><input type="number" id="sln-ret-age" class="numin" min="40" max="100" step="1" value="65"></div></div>
@@ -847,7 +856,7 @@ input[type=range]::-moz-range-thumb{
         <div class="div"></div>
         <div class="sec">Annual Savings<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
         <div class="sec-wrap" style="max-height:200px">
-          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><span class="numin-affix">$</span><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
+          <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><span class="numin-affix" data-unit="cur">$</span><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
         </div>
       </div>
 
@@ -977,6 +986,36 @@ input[type=range]::-moz-range-thumb{
 
 
 <script>
+// ── Calendar anchor ────────────────────────────────────────────────────────────
+// Every age↔year mapping in the sim keys off this one value. It used to be a
+// hardcoded 2026 repeated in 13+ places, which would have silently shifted every
+// age by a year on 1 Jan 2027. Derive it once instead.
+//   BASE_YR      — the starting-balance snapshot year (sim year index 0, no cashflow)
+//   FIRST_CF_YR  — first year that actually has a cashflow (loop starts at j=1)
+//   MAX_EVT_YR   — upper bound for event / windfall / inheritance year inputs
+const BASE_YR     = new Date().getFullYear();
+const FIRST_CF_YR = BASE_YR + 1;
+const MAX_EVT_YR  = BASE_YR + 49;
+// Floor for a year input. Normally FIRST_CF_YR, but if a stored record predates
+// that (e.g. an event set last year), widen the floor to fit it — otherwise the
+// input would visually snap to the new minimum while p2State still held the old
+// value, and the two would silently disagree.
+const yrMin = v => Math.min(FIRST_CF_YR, v || FIRST_CF_YR);
+
+// ── Currency ───────────────────────────────────────────────────────────────────
+// The questionnaire has always collected a currency but nothing downstream read
+// it, so every figure rendered as US dollars. This is display-only relabelling —
+// no FX conversion is performed, and none is implied.
+const CURRENCY_SYMBOLS = {USD:'$', EUR:'€', GBP:'£', CAD:'C$', AUD:'A$', CHF:'CHF', JPY:'¥', SGD:'S$', NZD:'NZ$'};
+let CUR = '$';
+// Currency affix spans are tagged `data-unit="cur"` in the markup; percent
+// affixes are left untagged, so this needs no guesswork about which is which.
+function setCurrencyFromData(d) {
+  const code = d && d.currency;
+  CUR = CURRENCY_SYMBOLS[code] || '$';
+  document.querySelectorAll('[data-unit="cur"]').forEach(el => { el.textContent = CUR; });
+}
+
 // ── Section collapse / expand ──────────────────────────────────────────────────
 function toggleSec(btn) {
   const wrap = btn.closest('.sec').nextElementSibling;
@@ -1001,7 +1040,7 @@ let _currentSim     = null;
 let _lastProbSuccess = null;
 
 function buildStatsHtml(sim, p, probSuccess) {
-  const startYr   = 2026;
+  const startYr   = BASE_YR;
   const retireYr  = startYr + Math.max(0, p.retireAge - p.currentAge);
   const lifeExpYr = startYr + (p.lifeExp - p.currentAge);
   const retireIdx = sim.years.indexOf(retireYr);
@@ -1114,7 +1153,7 @@ function removeSab(i) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmtS = n => n >= 1e6 ? '$'+(n/1e6).toFixed(2)+'M' : n >= 1e3 ? '$'+(n/1e3).toFixed(0)+'K' : '$'+Math.round(n);
+const fmtS = n => n >= 1e6 ? CUR+(n/1e6).toFixed(2)+'M' : n >= 1e3 ? CUR+(n/1e3).toFixed(0)+'K' : CUR+Math.round(n);
 const fmtC = n => Math.round(n).toLocaleString();
 
 function randN(m, s, z) {
@@ -1134,7 +1173,7 @@ function pct(sorted, p) {
 
 // ── Simulation ─────────────────────────────────────────────────────────────────
 function runSim(p) {
-  const startYr  = 2026;
+  const startYr  = BASE_YR;
   const retireYr = startYr + Math.max(0, p.retireAge - p.currentAge);
   // Guard against lifeExp <= currentAge (e.g. a corrupted/edge-case input that
   // slips past the UI's own ordering enforcement) — without this, endYr < startYr
@@ -1147,7 +1186,7 @@ function runSim(p) {
     const adj     = (p.yearlyAdjustments && p.yearlyAdjustments[year]) || {};
     const savMult = adj.savingsMult !== undefined ? adj.savingsMult : 1;
     const expMult = adj.expenseMult !== undefined ? adj.expenseMult : 1;
-    const age = p.currentAge + (year - 2026);
+    const age = p.currentAge + (year - BASE_YR);
     // SS/pension starts at claim age regardless of retirement status
     const ss  = (p.ssOn  && age >= p.ssAge)  ? p.ssAmt  : 0;
     const ss2 = (p.ss2On && age >= p.ss2Age) ? p.ss2Amt : 0;
@@ -1643,7 +1682,7 @@ function renderStats(p, thr, sim, extra) {
   document.getElementById('s-regular').innerHTML = regularYr +
     '<span style="font-size:0.5em;font-weight:500;color:var(--mu);margin-left:4px;letter-spacing:.03em">YEAR</span>';
   document.getElementById('s-regular-sub').textContent = 'Target: '+fmtS(reg.thr);
-  const lifeExpYr = 2026+(p.lifeExp-p.currentAge);
+  const lifeExpYr = BASE_YR+(p.lifeExp-p.currentAge);
   const iLE = sim.years.indexOf(lifeExpYr);
   if (iLE>=0) {
     document.getElementById('s-at65').textContent     = fmtS(sim.p50[iLE]);
@@ -1750,8 +1789,8 @@ function refresh() {
 
 
   // ── DWZ calculations ──
-  const retireYr  = 2026 + Math.max(0, p.retireAge - p.currentAge);
-  const lifeExpYr = 2026 + (p.lifeExp - p.currentAge);
+  const retireYr  = BASE_YR + Math.max(0, p.retireAge - p.currentAge);
+  const lifeExpYr = BASE_YR + (p.lifeExp - p.currentAge);
   const retireIdx = sim.years.indexOf(retireYr);
   const lifeExpIdx= sim.years.indexOf(lifeExpYr);
   const nRetire   = Math.max(1, lifeExpIdx - retireIdx);
@@ -1781,8 +1820,8 @@ function refresh() {
   const showSabMarkers = document.getElementById('tog-marks').checked;
   const showP90band    = document.getElementById('tog-p90').checked;
   const showP75band    = document.getElementById('tog-p75').checked;
-  const ssClaimYr  = 2026 + Math.max(0, p.ssAge  - p.currentAge);
-  const ss2ClaimYr = 2026 + Math.max(0, p.ss2Age - p.currentAge);
+  const ssClaimYr  = BASE_YR + Math.max(0, p.ssAge  - p.currentAge);
+  const ss2ClaimYr = BASE_YR + Math.max(0, p.ss2Age - p.currentAge);
   drawChart(sim, thr, {
     showFireLines, showSabMarkers, showP90band, showP75band,
     inh1on: p.inh1on, inh1yr: p.inh1yr, inh1amt: p.inh1amt,
@@ -2086,12 +2125,12 @@ function computeSummary(data) {
 
   const p = buildSimP(data, {shocks}, n);
   const sim = runSim(p);
-  const leYr = 2026 + (data.lifeExp - data.currentAge);
+  const leYr = BASE_YR + (data.lifeExp - data.currentAge);
   const leIdx = sim.years.indexOf(leYr);
   const i = leIdx>=0 ? leIdx : sim.years.length-1;
   const prob = sim.failed.filter(f => !f).length / sim.failed.length;
   const yrs  = Math.max(0, data.retireAge - data.currentAge);
-  const retYr = 2026 + yrs;
+  const retYr = BASE_YR + yrs;
 
   const base = prob;
   const allLevers = [
@@ -2158,6 +2197,29 @@ function loadPhase1Data() {
   } catch(e) { return null; }
 }
 
+// "Current Net Worth" used to carry a hardcoded "May 2026" subtitle that was
+// stale within months. Derive it from the clock instead.
+function initDateLabels() {
+  const el = document.getElementById('s-nw-asof');
+  if (el) el.textContent = new Date().toLocaleDateString(undefined, {month:'long', year:'numeric'});
+}
+
+// Ages are stored as absolute numbers against the year they were entered, so a
+// returning user's inputs silently drift. Surface it instead of guessing.
+function checkStaleInputs(data) {
+  const banner = document.getElementById('stale-banner');
+  if (!banner) return;
+  banner.style.display = 'none';   // re-hides after the user updates their inputs
+  if (!data) return;
+  const saved = data.timestamp ? new Date(data.timestamp).getFullYear() : null;
+  if (!saved || !isFinite(saved) || saved >= BASE_YR) return;
+  const gap = BASE_YR - saved;
+  document.getElementById('stale-banner-text').textContent =
+    `You last set these inputs in ${saved}. ${gap === 1 ? "A year has" : gap + " years have"} passed — ` +
+    `is your age still ${data.currentAge}?`;
+  banner.style.display = 'flex';
+}
+
 function setSlider(id, value) {
   const el = document.getElementById(id);
   // Non-numeric input (e.g. a legacy record missing a field) keeps the
@@ -2168,6 +2230,9 @@ function setSlider(id, value) {
 }
 
 function populateSliders(data) {
+  // Before renderP2()/refresh() run, so `${CUR}` templates and fmtS() pick up
+  // the questionnaire's currency instead of defaulting to dollars.
+  setCurrencyFromData(data);
   setSlider('sl-age',     data.currentAge);
   setSlider('sl-ret-age', data.retireAge);
   setSlider('sl-lifeexp', data.lifeExp);
@@ -2183,6 +2248,7 @@ function populateSliders(data) {
 function launchDashboard() {
   const data = loadPhase1Data();
   if(data) populateSliders(data);
+  checkStaleInputs(data);
   renderP2();
   refresh();
   document.getElementById('q-overlay').style.display = 'none';
@@ -2246,10 +2312,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('q-retage').addEventListener('input',  function(){ this.dataset.touched='1'; });
   document.getElementById('q-lifeexp').addEventListener('input', function(){ this.dataset.touched='1'; });
 
+  initDateLabels();
+
   // Check localStorage — skip questionnaire if already completed
   const data = loadPhase1Data();
   if(data) {
     populateSliders(data);
+    checkStaleInputs(data);
     renderP2();
     refresh();
     document.getElementById('q-overlay').style.display = 'none';
@@ -2341,8 +2410,11 @@ function loadP2State() {
       p2State.events = p2State.events.map(e =>
         (e.type === 'sabbatical' && e.budget === undefined) ? Object.assign({}, e, {type:'downshift'}) : e
       );
-      // Sim cashflows start in 2027 (2026 is the starting-balance snapshot),
-      // so bump any stored 2026 years — they were silently inert before
+      // One-off repair of records written before the 2026→2027 fix, when events
+      // stored at 2026 landed on the starting-balance year and were silently inert.
+      // 2027 is deliberately a LITERAL, not FIRST_CF_YR: this is a fix for a
+      // specific historical bug, and floating it would shove every user's events
+      // forward by a year on each 1 January, compounding indefinitely.
       p2State.events = p2State.events.map(e => Object.assign({}, e, {
         startYear: Math.max(2027, e.startYear || 2027),
         endYear:   e.endYear !== undefined ? Math.max(2027, e.endYear) : e.endYear,
@@ -2437,7 +2509,7 @@ function p2ApplyOverrides(p) {
       } else if (evt.type === 'sabbatical') {
         for (let yr=y0; yr<=y1; yr++) { ensure(yr); adj[yr].cashflowOverride = (adj[yr].cashflowOverride || 0) - (evt.budget || 80000); }
       } else if (evt.type === 'raise') {
-        const endYr = 2026 + (p.lifeExp - p.currentAge);
+        const endYr = BASE_YR + (p.lifeExp - p.currentAge);
         for (let yr=evt.startYear; yr<=endYr; yr++) { ensure(yr); adj[yr].savingsMult *= (1 + pct); }
       } else if (evt.dollarMode) {
         for (let yr=y0; yr<=y1; yr++) { ensure(yr); adj[yr].cashflowOverride = (adj[yr].cashflowOverride || 0) - (evt.budget || 0); }
@@ -2494,7 +2566,7 @@ function renderBodyA() {
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" id="p2a-bgt-r-${i}" min="0" max="500000" step="5000" value="${e.budget || (isSabbatical?80000:10000)}" style="flex:1"
             oninput="p2State.events[${i}].budget=+this.value;document.getElementById('p2a-bgtn-${i}').value=this.value;saveP2State();schedule()">
-          <span class="numin-affix">$</span>
+          <span class="numin-affix">${CUR}</span>
           <input type="number" id="p2a-bgtn-${i}" min="0" max="500000" step="5000" value="${e.budget || (isSabbatical?80000:10000)}" style="width:92px;${numStyle}"
             oninput="const v=Math.min(500000,Math.max(0,+this.value||0));p2State.events[${i}].budget=v;document.getElementById('p2a-bgt-r-${i}').value=v;saveP2State();schedule()">
         </div>
@@ -2519,28 +2591,28 @@ function renderBodyA() {
       <div class="sg">
         <div class="sr"><span>Start year</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2027" max="2075" step="1" value="${e.startYear}" style="flex:1"
+          <input type="range" min="${yrMin(e.startYear)}" max="${MAX_EVT_YR}" step="1" value="${e.startYear}" style="flex:1"
             oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2a-syn-${i}" min="2027" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2a-syn-${i}" min="${yrMin(e.startYear)}" max="${MAX_EVT_YR}" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
+            oninput="const v=Math.min(${MAX_EVT_YR},Math.max(${yrMin(e.startYear)},+this.value||${FIRST_CF_YR}));p2State.events[${i}].startYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>
       <div class="sg">
         <div class="sr"><span>End year</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2027" max="2075" step="1" value="${e.endYear}" style="flex:1"
+          <input type="range" min="${yrMin(e.endYear)}" max="${MAX_EVT_YR}" step="1" value="${e.endYear}" style="flex:1"
             oninput="p2State.events[${i}].endYear=+this.value;document.getElementById('p2a-eyn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2a-eyn-${i}" min="2027" max="2075" step="1" value="${e.endYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].endYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2a-eyn-${i}" min="${yrMin(e.endYear)}" max="${MAX_EVT_YR}" step="1" value="${e.endYear}" style="width:62px;${numStyle}"
+            oninput="const v=Math.min(${MAX_EVT_YR},Math.max(${yrMin(e.endYear)},+this.value||${FIRST_CF_YR}));p2State.events[${i}].endYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>` : `
       <div class="sg">
         <div class="sr"><span>Starting year</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2027" max="2075" step="1" value="${e.startYear}" style="flex:1"
+          <input type="range" min="${yrMin(e.startYear)}" max="${MAX_EVT_YR}" step="1" value="${e.startYear}" style="flex:1"
             oninput="p2State.events[${i}].startYear=+this.value;document.getElementById('p2a-syn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2a-syn-${i}" min="2027" max="2075" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.events[${i}].startYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2a-syn-${i}" min="${yrMin(e.startYear)}" max="${MAX_EVT_YR}" step="1" value="${e.startYear}" style="width:62px;${numStyle}"
+            oninput="const v=Math.min(${MAX_EVT_YR},Math.max(${yrMin(e.startYear)},+this.value||${FIRST_CF_YR}));p2State.events[${i}].startYear=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>`}
       ${customModeToggle}${lastControl}
@@ -2618,7 +2690,7 @@ function renderBodyC() {
       <div class="sg-row">
         <input type="range" id="p2c-ssamt" min="0" max="60000" step="1000" value="${d.ssAmt}"
           oninput="p2State.data['C'].ssAmt=+this.value;document.getElementById('p2c-ssamt-n').value=this.value;saveP2State();schedule()">
-        <span class="numin-affix">$</span>
+        <span class="numin-affix">${CUR}</span>
         <input type="number" id="p2c-ssamt-n" class="numin" min="0" max="60000" step="1000" value="${d.ssAmt}"
           oninput="const v=Math.min(60000,Math.max(0,+this.value||0));p2State.data['C'].ssAmt=v;document.getElementById('p2c-ssamt').value=v;saveP2State();schedule()">
       </div>
@@ -2643,7 +2715,7 @@ function renderBodyC() {
         <div class="sg-row">
           <input type="range" id="p2c-ss2amt" min="0" max="60000" step="1000" value="${d.ss2Amt}"
             oninput="p2State.data['C'].ss2Amt=+this.value;document.getElementById('p2c-ss2amt-n').value=this.value;saveP2State();schedule()">
-          <span class="numin-affix">$</span>
+          <span class="numin-affix">${CUR}</span>
           <input type="number" id="p2c-ss2amt-n" class="numin" min="0" max="60000" step="1000" value="${d.ss2Amt}"
             oninput="const v=Math.min(60000,Math.max(0,+this.value||0));p2State.data['C'].ss2Amt=v;document.getElementById('p2c-ss2amt').value=v;saveP2State();schedule()">
         </div>
@@ -2683,7 +2755,7 @@ function renderBodyD() {
         <div style="display:flex;align-items:center;gap:8px">
           <input type="range" id="p2d-amt-r-${i}" min="0" max="5000000" step="50000" value="${w.amt}" style="flex:1"
             oninput="p2State.data['D'].windfalls[${i}].amt=+this.value;document.getElementById('p2d-amtn-${i}').value=this.value;saveP2State();schedule()">
-          <span class="numin-affix">$</span>
+          <span class="numin-affix">${CUR}</span>
           <input type="number" id="p2d-amtn-${i}" min="0" max="5000000" step="50000" value="${w.amt}" class="numin" style="width:92px"
             oninput="const v=Math.min(5000000,Math.max(0,+this.value||0));p2State.data['D'].windfalls[${i}].amt=v;document.getElementById('p2d-amt-r-${i}').value=v;saveP2State();schedule()">
         </div>
@@ -2691,10 +2763,10 @@ function renderBodyD() {
       <div class="sg">
         <div class="sr"><span>Year received</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="2027" max="2075" step="1" value="${w.yr}" style="flex:1"
+          <input type="range" min="${yrMin(w.yr)}" max="${MAX_EVT_YR}" step="1" value="${w.yr}" style="flex:1"
             oninput="p2State.data['D'].windfalls[${i}].yr=+this.value;document.getElementById('p2d-yrn-${i}').value=this.value;saveP2State();schedule()">
-          <input type="number" id="p2d-yrn-${i}" min="2027" max="2075" step="1" value="${w.yr}" class="numin" style="width:62px"
-            oninput="const v=Math.min(2075,Math.max(2027,+this.value||2027));p2State.data['D'].windfalls[${i}].yr=v;this.previousElementSibling.value=v;saveP2State();schedule()">
+          <input type="number" id="p2d-yrn-${i}" min="${yrMin(w.yr)}" max="${MAX_EVT_YR}" step="1" value="${w.yr}" class="numin" style="width:62px"
+            oninput="const v=Math.min(${MAX_EVT_YR},Math.max(${yrMin(w.yr)},+this.value||${FIRST_CF_YR}));p2State.data['D'].windfalls[${i}].yr=v;this.previousElementSibling.value=v;saveP2State();schedule()">
         </div>
       </div>
     </div>`).join('');
@@ -2908,9 +2980,9 @@ function p2Toggle(id, checked) {
 
 // ── Life event handlers ───────────────────────────────────────
 function p2AddEvent(type) {
-  // Next calendar year, clamped into the simulated window (sim years are
-  // anchored to 2026; cashflows start in 2027)
-  const yr = Math.min(2073, Math.max(2027, new Date().getFullYear() + 1));
+  // First cashflow year, clamped into the simulated window. −2 leaves headroom
+  // for the default endYear of yr+2 to stay inside that window.
+  const yr = Math.min(MAX_EVT_YR - 2, FIRST_CF_YR);
   const defaultNames = {downshift:'Downshift Savings', sabbatical:'Sabbatical', raise:'Raise', kids:'Kids / Expense'};
   const evt = type === 'sabbatical'
     ? {type, name: defaultNames[type] || '', startYear:yr, endYear:yr+2, budget:80000, enabled:true}
@@ -2922,7 +2994,8 @@ function p2AddEvent(type) {
 }
 
 function p2AddCustomEvent() {
-  const yr = Math.min(2073, Math.max(2027, new Date().getFullYear() + 1));
+  // −2 leaves headroom for the default endYear of yr+2 to stay inside the window
+  const yr = Math.min(MAX_EVT_YR - 2, FIRST_CF_YR);
   p2State.events.push({type:'custom', name:'Custom Event', startYear:yr, endYear:yr+2, pct:10, dollarMode:false, enabled:true});
   saveP2State();
   renderP2();
