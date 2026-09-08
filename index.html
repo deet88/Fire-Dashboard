@@ -159,6 +159,7 @@ canvas{display:block;width:100%;height:100%}
 .ll{width:18px;height:2px}
 .lb{width:18px;height:7px;border-radius:2px}
 .snote{font-size:10px;color:var(--mu2);text-align:center;margin-top:6px}
+.export-row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
 
 /* ─── FIRE cards ──────────────────────────────────────────── */
 .fc{
@@ -642,6 +643,19 @@ input[type=range]::-moz-range-thumb{
   .risk-grid{grid-template-columns:1fr}
   .q-sum-stats{grid-template-columns:1fr}
 }
+
+/* Print / save-as-PDF. Drops the interactive chrome and keeps the chart, the
+   headline stats and the assumptions. The canvas prints in whichever theme is
+   active, so day vision gives the more legible page. */
+@media print{
+  .export-row, .snap-btn, #theme-toggle-btn, #q-edit-header-btn,
+  #q-overlay, #compare-modal, .p2-reorder, .p2-handle, .sec-toggle,
+  #stale-banner{display:none !important}
+  body{background:#fff}
+  .panel{break-inside:avoid;page-break-inside:avoid}
+  .stat-bar{break-inside:avoid;page-break-inside:avoid}
+  .sec-wrap{max-height:none !important;overflow:visible !important}
+}
 </style>
 </head>
 <body>
@@ -803,7 +817,10 @@ input[type=range]::-moz-range-thumb{
   <button class="p2-banner-accept" onclick="openPhase1()">Review inputs</button>
 </div>
 
-<div class="stat-bar">
+<!-- Deliberately a navigable region, not aria-live: refresh() fires on every
+     slider movement, and a live region would announce continuously while
+     dragging. Users can move to this region when they want the numbers. -->
+<div class="stat-bar" role="region" aria-label="Key results">
   <div class="sc"><div class="sc-lbl">Current Net Worth</div><div class="sc-val c-g" id="s-nw">—</div><div class="sc-sub" id="s-nw-asof">—</div></div>
   <div class="sc"><div class="sc-lbl">Coast FIRE</div><div class="sc-val c-b" id="s-coast">—</div><div class="sc-sub" id="s-coast-sub">—</div></div>
   <div class="sc"><div class="sc-lbl">Regular FIRE (P50)</div><div class="sc-val c-p" id="s-regular">—</div><div class="sc-sub" id="s-regular-sub">—</div></div>
@@ -820,7 +837,9 @@ input[type=range]::-moz-range-thumb{
     <div class="panel">
       <div class="sec">Net Worth Projection · Monte Carlo</div>
       <div class="chart-wrap" id="chart-wrap">
-        <canvas id="myCanvas"></canvas>
+        <!-- aria-label is rewritten by refresh() with the current headline
+             numbers, so the chart is not a dead end for screen readers -->
+        <canvas id="myCanvas" role="img" aria-label="Net worth projection chart"></canvas>
         <div id="tooltip"></div>
       </div>
       <div class="legend">
@@ -837,6 +856,11 @@ input[type=range]::-moz-range-thumb{
         <div class="li" id="li-saved"><div class="ll" style="background:rgba(139,148,158,0.6);border-top:2px dashed rgba(139,148,158,0.6)"></div><span>Saved scenario</span></div>
       </div>
       <div class="snote">Running <span id="sim-count">500</span> simulations · <span id="run-time2">—</span></div>
+      <div class="export-row">
+        <button class="snap-btn" onclick="exportCSV()" title="Percentile paths and assumptions as CSV">⭳ CSV</button>
+        <button class="snap-btn" onclick="exportPNG()" title="Save the chart as a PNG image">⭳ Chart PNG</button>
+        <button class="snap-btn" onclick="window.print()" title="Print or save as PDF">⎙ Print</button>
+      </div>
     </div>
 
     <!-- ── Phase 1 controls ── -->
@@ -1090,6 +1114,71 @@ function saveSnapshot() {
   document.getElementById('compare-btn').style.display = 'inline-block';
   document.getElementById('snap-label').textContent   = 'Saved: ' + _savedScenario.label;
   schedule();
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────────
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Percentile paths as CSV. Assumptions ride along as `#`-prefixed preamble
+// lines — a projection without its inputs is unreadable six months later, and
+// most tools (pandas, R, awk) skip comment lines by convention.
+function exportCSV() {
+  const sim = _currentSim;
+  if (!sim) return;
+  const p = getP();
+  const meta = [
+    ['# FIRE Dashboard projection', new Date().toISOString().slice(0,10)],
+    ['# currency', CUR],
+    ['# current age', p.currentAge], ['# retirement age', p.retireAge],
+    ['# life expectancy', p.lifeExp],
+    ['# starting net worth', Math.round(p.currentNW)],
+    ['# annual retirement expenses', Math.round(p.expenses)],
+    ['# annual contributions', Math.round(p.londonSave)],
+    ['# nominal return %', (p.nomRet*100).toFixed(2)],
+    ['# inflation %', (p.inf*100).toFixed(2)],
+    ['# real return (median CAGR) %', (p.ret*100).toFixed(2)],
+    ['# volatility %', (p.vol*100).toFixed(2)],
+    ['# simulations', p.numSims],
+    ['# spending guardrails', p.guardOn ? 'on' : 'off'],
+    ['# return model', 'block bootstrap of S&P 500 annual returns 1928-2025'],
+    ['# values are REAL (inflation-adjusted)'],
+  ];
+  const rows = [['year','age','p10','p25','p50','p75','p90']];
+  for (let i=0; i<sim.years.length; i++) {
+    rows.push([
+      sim.years[i], p.currentAge + (sim.years[i] - BASE_YR),
+      Math.round(sim.p10[i]), Math.round(sim.p25[i]), Math.round(sim.p50[i]),
+      Math.round(sim.p75[i]), Math.round(sim.p90[i]),
+    ]);
+  }
+  const csv = meta.concat(rows).map(r => r.join(',')).join('\n');
+  downloadBlob(new Blob([csv], {type:'text/csv;charset=utf-8'}),
+               `fire-projection-${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+function exportPNG() {
+  if (!canvas) return;
+  const out = document.createElement('canvas');
+  out.width  = canvas.width;
+  out.height = canvas.height;
+  const ctx = out.getContext('2d');
+  // The chart canvas itself is transparent — without an opaque ground behind
+  // it, a dark-theme export arrives as dark strokes on nothing.
+  ctx.fillStyle = getComputedStyle(document.body).backgroundColor || '#ffffff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(canvas, 0, 0);
+  out.toBlob(b => {
+    if (b) downloadBlob(b, `fire-chart-${new Date().toISOString().slice(0,10)}.png`);
+  }, 'image/png');
 }
 
 function clearSnapshot() {
@@ -1963,6 +2052,18 @@ function refresh() {
     void el.offsetWidth; // reflow to restart animation
     el.classList.add('val-updated');
   });
+  // Describe the chart for screen readers — a bare <canvas> is otherwise a
+  // dead end, and this is the primary output of the whole page.
+  if (canvas) {
+    const atRet  = retireIdx  >= 0 ? fmtS(sim.p50[retireIdx])  : '—';
+    const atLife = lifeExpIdx >= 0 ? fmtS(sim.p50[lifeExpIdx]) : '—';
+    canvas.setAttribute('aria-label',
+      `Net worth projection, ${sim.years[0]} to ${sim.years[sim.years.length-1]}, ` +
+      `in real terms. Median net worth ${atRet} at retirement in ${retireYr}, ` +
+      `${atLife} at age ${p.lifeExp}. Portfolio survives retirement in ` +
+      `${Math.round(probSuccess*100)}% of ${p.numSims} simulations.`);
+  }
+
   const t = new Date().toLocaleTimeString();
   document.getElementById('run-time').textContent  = t;
   document.getElementById('run-time2').textContent = t;
