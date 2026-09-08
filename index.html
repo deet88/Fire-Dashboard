@@ -858,6 +858,17 @@ input[type=range]::-moz-range-thumb{
         <div class="sec-wrap" style="max-height:200px">
           <div class="sg"><div class="sr"><span>Annual Contributions (pre-retirement)</span></div><div class="sg-row"><input type="range" id="sl-lon" min="0" max="300000" step="5000" value="0"><span class="numin-affix" data-unit="cur">$</span><input type="number" id="sln-lon" class="numin" min="0" max="300000" step="5000" value="0"></div></div>
         </div>
+        <div class="div"></div>
+        <div class="sec">Withdrawal Strategy<button class="sec-toggle open" onclick="toggleSec(this)">▾</button></div>
+        <div class="sec-wrap" style="max-height:220px">
+          <div class="tr"><label for="tog-guard">Spending guardrails</label><label class="tog"><input type="checkbox" id="tog-guard"><span class="ttrack"></span></label></div>
+          <div style="font-size:10px;color:var(--mu2);line-height:1.45;padding:2px 0 6px">
+            Off, spending stays flat even through a crash — the most pessimistic
+            assumption, and not what real retirees do. On, spending is cut 10%
+            once the withdrawal rate runs 20% above its level at retirement, and
+            raised 10% when it falls 20% below, capped at ±20% either way.
+          </div>
+        </div>
       </div>
 
       <!-- Market Assumptions -->
@@ -1200,6 +1211,16 @@ const HIST_LOG_SD   = Math.sqrt(
   HIST_LOG.reduce((a,l) => a + (l-HIST_LOG_MEAN)*(l-HIST_LOG_MEAN), 0) / HIST_LOG.length);
 const BLOCK_YRS = 5;   // block length — long enough to carry a crash-and-recovery run
 
+// ── Spending guardrails ────────────────────────────────────────────────────────
+// Simplified Guyton-Klinger. Holding spending flat through a crash is the most
+// pessimistic assumption available and not what real retirees do; these let
+// spending flex within a band instead. Opt-in, so results stay comparable.
+// Trigger when the withdrawal rate drifts ±20% from its level at retirement,
+// adjust by 10%, and never let cumulative drift exceed ±20% of plan.
+const GR_UPPER = 1.20, GR_LOWER = 0.80;   // withdrawal-rate trigger band
+const GR_STEP  = 0.10;                    // size of each adjustment
+const GR_CEIL  = 1.20, GR_FLOOR  = 0.80;  // cumulative bounds on spending
+
 // One path's worth of annual real returns, by block bootstrap.
 //
 // Contiguous blocks preserve both the fat left tail and the serial clustering of
@@ -1238,7 +1259,19 @@ function runSim(p) {
   const years    = [];
   for (let y=startYr; y<=endYr; y++) years.push(y);
 
-  function cf(year) {
+  // Planned retirement spending for a year, before any guardrail adjustment.
+  // Shared with cf() so the two can never drift apart.
+  function grossSpend(year) {
+    const adj     = (p.yearlyAdjustments && p.yearlyAdjustments[year]) || {};
+    const expMult = adj.expenseMult !== undefined ? adj.expenseMult : 1;
+    const age     = p.currentAge + (year - BASE_YR);
+    const mult    = p.usePhases
+      ? (age >= p.noGoAge ? p.noGoMult : age >= p.slowGoAge ? p.slowGoMult : 1)
+      : 1;
+    return p.expenses * mult * expMult;
+  }
+
+  function cf(year, spendMult) {
     const adj     = (p.yearlyAdjustments && p.yearlyAdjustments[year]) || {};
     const savMult = adj.savingsMult !== undefined ? adj.savingsMult : 1;
     const expMult = adj.expenseMult !== undefined ? adj.expenseMult : 1;
@@ -1249,14 +1282,11 @@ function runSim(p) {
     // $-events (sabbatical / custom-$) replace the year's normal cashflow in
     // any year, pre- or post-retirement; overlapping $-events were summed in
     // p2ApplyOverrides and %-expense events (kids / custom-%) stack on top.
+    // Guardrails deliberately do NOT scale these — the user named an explicit
+    // amount for that year, so silently trimming it would be wrong.
     if (adj.cashflowOverride !== undefined)
       return adj.cashflowOverride - p.expenses * (expMult - 1) + ss + ss2;
-    if (year >= retireYr) {
-      const mult = p.usePhases
-        ? (age >= p.noGoAge ? p.noGoMult : age >= p.slowGoAge ? p.slowGoMult : 1)
-        : 1;
-      return -(p.expenses * mult * expMult - ss - ss2);
-    }
+    if (year >= retireYr) return -(grossSpend(year) * spendMult - ss - ss2);
     if (p.includeSab) { const s=sabbaticals.find(s=>s.year===year); if(s) return -s.budget; }
     return p.londonSave * savMult - p.expenses * (expMult - 1) + ss + ss2;
   }
@@ -1275,11 +1305,26 @@ function runSim(p) {
     let broke = false;
     const t = [pf];
     const rets = drawReturns(p, years.length - 1, p.shocks ? p.shocks[i] : null);
+    // Guardrail state, per path: `spendMult` scales retirement spending, and
+    // `baseWR` is the withdrawal rate at the moment of retirement that later
+    // years are judged against.
+    let spendMult = 1, baseWR = null;
     for (let j=1; j<years.length; j++) {
-      const raw = pf*(1+rets[j-1]) + cf(years[j]) + inh(years[j]);
+      const yr = years[j];
+      if (p.guardOn && yr >= retireYr) {
+        const planned = grossSpend(yr);
+        if (baseWR === null) {
+          baseWR = pf > 0 ? planned / pf : Infinity;
+        } else if (pf > 0 && baseWR > 0 && isFinite(baseWR)) {
+          const wr = (planned * spendMult) / pf;
+          if      (wr > baseWR * GR_UPPER) spendMult = Math.max(GR_FLOOR, spendMult * (1 - GR_STEP));
+          else if (wr < baseWR * GR_LOWER) spendMult = Math.min(GR_CEIL,  spendMult * (1 + GR_STEP));
+        }
+      }
+      const raw = pf*(1+rets[j-1]) + cf(yr, spendMult) + inh(yr);
       // Depleting during retirement is a permanent failure, even if a later
       // windfall revives the balance — the retiree was broke in between.
-      if (raw <= 0 && years[j] >= retireYr) broke = true;
+      if (raw <= 0 && yr >= retireYr) broke = true;
       pf = Math.max(0, raw);
       t.push(pf);
     }
@@ -1779,6 +1824,7 @@ function getP() {
     retireAge:          +document.getElementById('sl-ret-age').value,
     lifeExp:            +document.getElementById('sl-lifeexp').value,
     dzwOn:              document.getElementById('tog-dzw').checked,
+    guardOn:            document.getElementById('tog-guard').checked,
     londonSave:         +document.getElementById('sl-lon').value,
     includeSab:         document.getElementById('tog-sab').checked,
     numSims:            +document.getElementById('sl-sims').value,
@@ -2018,7 +2064,7 @@ function enforceAgeOrder(e) {
   .forEach(id => document.getElementById(id).addEventListener('input', schedule));
 ['sl-ssamt','sl-ssage','sl-ss2amt','sl-ss2age']
   .forEach(id => document.getElementById(id).addEventListener('input', schedule));
-['tog-sab','tog-fire','tog-marks','tog-p90','tog-p75','tog-inh1','tog-inh2','tog-phases','tog-ss','tog-ss2','tog-dzw']
+['tog-sab','tog-fire','tog-marks','tog-p90','tog-p75','tog-inh1','tog-inh2','tog-phases','tog-ss','tog-ss2','tog-dzw','tog-guard']
   .forEach(id => document.getElementById(id).addEventListener('change', schedule));
 ['sl-inh1yr','sl-inh2yr','sl-inh1amt','sl-inh2amt']
   .forEach(id => document.getElementById(id).addEventListener('input', schedule));
@@ -2153,7 +2199,7 @@ function buildSimP(data, overrides={}, numSims=200) {
     swr:4, currentAge:data.currentAge, retireAge:data.retireAge, lifeExp:data.lifeExp,
     numSims, usePhases:false, ssOn:false, ssAmt:0, ssAge:67,
     includeSab:false, londonSave:data.annualSave || 0,
-    dzwOn:false, inh1on:false, inh2on:false,
+    dzwOn:false, inh1on:false, inh2on:false, guardOn:false,
     inh1amt:0,inh1yr:2030,inh2amt:0,inh2yr:2040,
     slowGoAge:75,slowGoMult:0.8,noGoAge:85,noGoMult:0.65,
     ...overrides,
