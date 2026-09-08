@@ -1463,9 +1463,9 @@ function calcFire(expenses, swr, currentAge, retireAge, ret) {
   // can never price out above Barista/Regular/Chubby/Fat.
   return [
     {key:'coast',  name:'Coast FIRE',  color:tc('coast'),  thr:fire/Math.pow(1+ret,yrs),       desc:'No more saving needed'},
-    {key:'lean',   name:'Lean FIRE',   color:tc('lean'),   thr:Math.min(40000, expenses*0.35)/(swr/100), desc:'Frugal baseline · essentials only, up to $40K/yr'},
+    {key:'lean',   name:'Lean FIRE',   color:tc('lean'),   thr:Math.min(40000, expenses*0.35)/(swr/100), desc:'Frugal baseline · essentials only, up to '+CUR+'40K/yr'},
     {key:'barista',name:'Barista FIRE',color:tc('barista'),thr:expenses*0.4/(swr/100),          desc:'Part-time work covers 60% of expenses'},
-    {key:'regular',name:'Regular FIRE',color:tc('regular'),thr:fire,                             desc:`Full retirement · 25× $${fmtC(expenses)}/yr`},
+    {key:'regular',name:'Regular FIRE',color:tc('regular'),thr:fire,                             desc:`Full retirement · 25× ${CUR}${fmtC(expenses)}/yr`},
     {key:'chubby', name:'Chubby FIRE', color:tc('chubby'), thr:expenses*1.5/(swr/100),          desc:'Comfortable cushion · 1.5× your expenses'},
     {key:'fat',    name:'Fat FIRE',    color:tc('fat'),    thr:expenses*2.5/(swr/100),          desc:'Luxury lifestyle · 2.5× your expenses'},
   ];
@@ -1539,7 +1539,7 @@ function drawChart(sim, thr, opts) {
     const y = yAt(v);
     if (y < pad.top-2 || y > pad.top+pH+2) continue;
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+pW, y); ctx.stroke();
-    ctx.fillText(v>=1e6 ? '$'+(v/1e6).toFixed(1)+'M' : '$'+(v/1e3).toFixed(0)+'K', pad.left-5, y+3.5);
+    ctx.fillText(v>=1e6 ? CUR+(v/1e6).toFixed(1)+'M' : CUR+(v/1e3).toFixed(0)+'K', pad.left-5, y+3.5);
   }
 
   // Vertical grid lines + X labels — tick stride grows on narrow charts so
@@ -1889,7 +1889,7 @@ function renderStats(p, thr, sim, extra) {
   // DWZ budget
   if (p.dzwOn && extra.dzwBudget > 0) {
     document.getElementById('s-dzw').textContent     = fmtS(extra.dzwBudget)+'/yr';
-    document.getElementById('s-dzw-sub').textContent = 'targets $0 at age '+p.lifeExp+(p.ssOn?' (incl. SS)':'');
+    document.getElementById('s-dzw-sub').textContent = 'targets '+CUR+'0 at age '+p.lifeExp+(p.ssOn?' (incl. SS)':'');
     document.getElementById('s-dzw-lbl').textContent = 'Die with Zero Budget';
     document.getElementById('s-dzw').style.color     = 'var(--orange)';
   } else {
@@ -2578,7 +2578,7 @@ const P2_CARDS = [
   {id:'C', title:'Social Security',               desc:'Override SS benefit and claim age',       free:true},
   {id:'D', title:'Windfalls',                     desc:'One-time windfalls added to portfolio',   free:true},
   {id:'E', title:'Spending Phases',               desc:'Go-go / slow-go / no-go multipliers',    free:true},
-  {id:'F', title:'Die with Zero',                 desc:'Spend down to $0 by life expectancy',    free:true},
+  {id:'F', title:'Die with Zero',                 desc:'Spend down to zero by life expectancy',    free:true},
   {id:'H', title:'Country / Region',              desc:'Suggests inflation & life expectancy adjustments by country', free:true},
 ];
 
@@ -2859,8 +2859,8 @@ function renderBodyB() {
   // p2ApplyOverrides() only swaps in the category breakdown once total > 0 —
   // until then the sim keeps using Phase 1's expenses, so the delta line must
   // say that instead of implying the model just switched to $0 spending.
-  const deltaStr = total > 0 ? (delta >= 0 ? '+' : '') + fmtC(delta) + ' vs Phase 1 ($' + fmtC(baseExp) + ')'
-                             : 'Enter your expenses below — currently using Phase 1’s $' + fmtC(baseExp);
+  const deltaStr = total > 0 ? (delta >= 0 ? '+' : '') + fmtC(delta) + ' vs Phase 1 (' + CUR + fmtC(baseExp) + ')'
+                             : 'Enter your expenses below — currently using Phase 1’s ' + CUR + fmtC(baseExp);
   const deltaClass = total > 0 ? (delta > 0 ? 'pos' : 'neg') : 'neutral';
 
   const grid = FIELDS.map(([k,lbl]) => `
@@ -2878,7 +2878,7 @@ function renderBodyB() {
     <div class="p2-exp-grid">${grid}</div>
     <div class="p2-exp-total">
       <span>Annual total</span>
-      <span class="p2-exp-total-val" id="p2b-total">$${fmtC(adjusted)}</span>
+      <span class="p2-exp-total-val" id="p2b-total">${CUR}${fmtC(adjusted)}</span>
     </div>
     <div class="p2-exp-delta ${deltaClass}" id="p2b-delta">${deltaStr}</div>
     <div style="font-size:10px;color:var(--mu);margin-top:8px">Retirement spending multiplier</div>
@@ -3226,10 +3226,10 @@ function p2UpdateExpTotal() {
   const delta    = adjusted - baseExp;
   const el = document.getElementById('p2b-total');
   const dl = document.getElementById('p2b-delta');
-  if (el) el.textContent = '$' + fmtC(adjusted);
+  if (el) el.textContent = CUR + fmtC(adjusted);
   if (dl) {
-    dl.textContent = total > 0 ? (delta >= 0 ? '+' : '') + fmtC(delta) + ' vs Phase 1 ($' + fmtC(baseExp) + ')'
-                               : 'Enter your expenses below — currently using Phase 1’s $' + fmtC(baseExp);
+    dl.textContent = total > 0 ? (delta >= 0 ? '+' : '') + fmtC(delta) + ' vs Phase 1 (' + CUR + fmtC(baseExp) + ')'
+                               : 'Enter your expenses below — currently using Phase 1’s ' + CUR + fmtC(baseExp);
     dl.className   = 'p2-exp-delta ' + (total > 0 ? (delta > 0 ? 'pos' : 'neg') : 'neutral');
   }
   saveP2State();
