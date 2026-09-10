@@ -902,7 +902,7 @@ input[type=range]::-moz-range-thumb{
           <div class="sg">
             <div class="sr"><span>Nominal Annual Return</span></div>
             <div class="sg-row"><input type="range" id="sl-ret" min="2" max="14" step="0.1" value="8.8"><input type="number" id="sln-ret" class="numin" min="2" max="14" step="0.1" value="8.8"><span class="numin-affix">%</span></div>
-            <div style="font-size:10px;color:var(--mu);margin-top:3px">Real return, median compounded (used in model): <span id="v-realret">5.8</span>%</div>
+            <div style="font-size:10px;color:var(--mu);margin-top:3px">Real return, median compounded (used in model): <span id="v-realret">5.6</span>%<span id="realret-warn" style="display:none;color:var(--yellow);font-weight:600;cursor:help"> ⚠ above profile</span></div>
           </div>
           <div class="sg">
             <div class="sr"><span>Return Volatility (σ)</span></div>
@@ -1942,6 +1942,27 @@ function getP() {
 }
 function updateLabels(p) {
   document.getElementById('v-realret').textContent = (p.ret*100).toFixed(1);
+  // The real return is what the projection actually compounds, and it moves
+  // whenever EITHER the nominal return or the inflation slider moves. Flag it
+  // when it has drifted well above the calibrated figure for the chosen risk
+  // profile — the usual cause is lowering inflation while leaving the nominal
+  // return alone, which is precisely the mismatch this build removed from the
+  // automatic paths. Advisory only; nothing is clamped and nothing is blocked.
+  const warn = document.getElementById('realret-warn');
+  if (warn) {
+    let cal = null, prof = '';
+    try {
+      const d  = loadPhase1Data();
+      const rp = d && RISK_PROFILES[d.riskProfile];
+      if (rp) { cal = rp.realRet; prof = d.riskProfile; }
+    } catch(e) { /* no snapshot, or profile renamed — just don't flag */ }
+    const over = cal != null && p.ret*100 > cal + 1;
+    warn.style.display = over ? 'inline' : 'none';
+    if (over) warn.title =
+      `This plan compounds ${(p.ret*100).toFixed(1)}% real per year, against ${cal}% `
+      + `calibrated for ${prof} on 1928-2025 data. Lowering inflation without also `
+      + `lowering the nominal return raises real growth — they move together.`;
+  }
   document.getElementById('sim-count').textContent = p.numSims;
   document.getElementById('sim-badge').textContent = p.numSims+' sims';
   document.getElementById('v-inh1amt').textContent = fmtC(p.inh1amt);
@@ -2189,11 +2210,72 @@ renderSabEditor();
 <script>
 // ── Phase 1 Questionnaire ──────────────────────────────────────────────────────
 
+// ── Risk profiles ──────────────────────────────────────────────────────────────
+// Each profile carries its REAL (inflation-adjusted) median compounded return —
+// exactly the figure runSim() consumes. The real return is the invariant here,
+// NOT the nominal one: across inflation regimes real returns are far more stable
+// than nominal ones, so a nominal return only means anything paired with the
+// inflation rate that produced it. The nominal figure shown to the user is
+// derived from their own inflation assumption via nomFromReal(). That is what
+// stops a lower inflation assumption from silently raising real growth — the bug
+// this replaces, where a UK user accepting "inflation 2.0%" was handed a 7.47%
+// real median CAGR, above the S&P 500's own full-history real CAGR of 6.78%.
+//
+// Derivation (2026-09-09), from the source already cited for HIST_RETURNS above —
+// Damodaran, NYU Stern, 1928-2025 — deflated year by year by Dec/Dec CPI-U
+// (FRED CPIAUCNS), so the stock/inflation covariance is preserved:
+//   stocks (S&P 500)         real arithmetic mean 8.61%, sd 19.21%
+//   bonds  (10-yr Treasury)  real arithmetic mean 1.83%, sd  8.81%, corr +0.09
+//   inflation over the period: 3.04%/yr compounded
+//   w       = (stocks + other)/100                        -- the risky weight
+//   vol     = sqrt(w^2*19.21^2 + (1-w)^2*8.81^2 + 2*w*(1-w)*0.09*19.21*8.81)
+//   realRet = w*8.61% + (1-w)*1.83%  -  vol^2/2
+// The drag term uses the profile's own vol, which is what keeps realRet
+// self-consistent with drawReturns() — it recentres in log space so `ret` IS the
+// median compounded rate.
+//
+// These vol figures REPLACE the profiles' original ones (4.57 / 9.57 / 13.02 /
+// 15.68), which were not merely low but arithmetically impossible. With
+// non-negative stock/bond correlation a portfolio's sd cannot fall below
+// w*sd_stocks, and all four sat beneath that floor; Conservative's 4.57 was under
+// even the most charitable version of it (30% equities with everything else
+// risk-free still floors at 5.76%). Reproducing the old set would have needed
+// stock/bond correlations of -0.52 to -0.81 against a measured +0.09. The
+// correction costs Conservative the most — a retire-at-55 case falls from ~99%
+// success to ~85% — which is the profile most exposed to sequence-of-returns risk
+// finally being priced for it. It also lifts Conservative's vol above the sl-vol
+// slider's min of 5, which the dashboard had been silently clamping it up to.
+//
+// p5y1 / p95y20 are the two figures on the card's second line, both measured by
+// running drawReturns() itself at each profile's realRet and vol, so every number
+// on a risk card comes out of the same model as the projection:
+//   p5y1   5th-percentile SINGLE-year real return  (200k draws; deterministic to
+//          2dp, since a 1-year draw is a uniform pick from the 98 recentred values)
+//   p95y20 95th-percentile 20-YEAR annualised real return (40k paths)
+//
+// The horizons are deliberately different. A 20-year 5th percentile does not
+// separate these profiles at all — it spans just 0.5% to -0.0% across the whole
+// ladder, because over 20 years the higher return offsets the higher volatility.
+// True, but useless on a card whose job is "pick your risk level". The one-year
+// figure spans -14.7% to -24.2% and is what taking more risk actually feels like.
+// So the line pairs SHORT-TERM pain against LONG-TERM reward, which is the real
+// trade being made. Keep the tooltip in renderRiskCards() in step with this.
+//
+// KNOWN OPEN ITEM — the "other" bucket is 25% of three of these portfolios and
+// has never been defined. Folding it into w as equity-like is a DECISION, not a
+// measurement, and it is an upper bound on vol. Modelling it instead as real
+// assets from this same dataset (50/50 the Real Estate and Gold columns) gives
+// Aggressive Growth a realRet of 5.40% rather than 6.23%, and inverts the ladder:
+// Balanced comes out LESS volatile than Conservative, because 25% of a
+// near-uncorrelated asset diversifies harder than 60% of 10-year Treasuries. A
+// ~0.8pp swing in the headline number, driven entirely by an undefined input.
+// Either pin down what "other" is, or drop the bucket and restate these as
+// stocks/bonds, where every figure on the card is derivable from cited data.
 const RISK_PROFILES = {
-  Conservative:        {nomRet:5.78, vol:4.57, bonds:60,stocks:30,other:10, worst20:3.7, best20:7.8,  tagline:'Best for: In or near retirement, low risk tolerance'},
-  Balanced:            {nomRet:7.83, vol:9.57, bonds:40,stocks:35,other:25, worst20:3.6, best20:12.1, tagline:'Best for: Steady approach, mixed risk tolerance'},
-  Growth:              {nomRet:8.89, vol:13.02,bonds:25,stocks:49,other:26, worst20:3.1, best20:14.7, tagline:'Best for: 10+ years to retirement, moderate risk'},
-  'Aggressive Growth': {nomRet:9.62, vol:15.68,bonds:15,stocks:60,other:25, worst20:2.6, best20:16.6, tagline:'Best for: Long timeline, high risk tolerance'},
+  Conservative:        {realRet:4.07, vol:9.71, bonds:60,stocks:30,other:10, p5y1:-14.7, p95y20:7.2,  tagline:'Best for: In or near retirement, low risk tolerance'},
+  Balanced:            {realRet:5.14, vol:12.35,bonds:40,stocks:35,other:25, p5y1:-18.4, p95y20:9.2,  tagline:'Best for: Steady approach, mixed risk tolerance'},
+  Growth:              {realRet:5.83, vol:14.77,bonds:25,stocks:49,other:26, p5y1:-21.8, p95y20:10.7, tagline:'Best for: 10+ years to retirement, moderate risk'},
+  'Aggressive Growth': {realRet:6.23, vol:16.50,bonds:15,stocks:60,other:25, p5y1:-24.2, p95y20:11.8, tagline:'Best for: Long timeline, high risk tolerance'},
 };
 
 let _selectedRisk = 'Balanced';
@@ -2237,9 +2319,9 @@ function renderRiskCards() {
       </div>
       <div class="risk-name">${name}</div>
       <div class="risk-tag">${p.tagline}</div>
-      <div class="risk-data">
-        Return <b>${p.nomRet}%</b> · Vol <b>${p.vol}%</b><br>
-        Worst 20yr avg <span class="risk-neg">${p.worst20}%</span> · Best <span class="risk-pos">+${p.best20}%</span>
+      <div class="risk-data" title="Bad year: 5th-percentile single-year real return — one year in twenty is at least this bad. Strong 20yr: 95th-percentile 20-year annualised real return. Both come from the same simulation the projection uses.">
+        Return <b>${nomFromReal(p.realRet, Q_INFLATION).toFixed(1)}%</b> nom · <b>${p.realRet}%</b> real · Vol <b>${p.vol}%</b><br>
+        Bad year <span class="risk-neg">${p.p5y1}%</span> · Strong 20yr <span class="risk-pos">+${p.p95y20}%</span>/yr
       </div>`;
     grid.appendChild(card);
   });
@@ -2282,19 +2364,36 @@ function validatePhase1() {
     currentNW: nw, expenses: exp, annualSave: save,
     currency: document.getElementById('q-currency').value,
     riskProfile: _selectedRisk,
-    nomRet: rp.nomRet, vol: rp.vol,
+    realRet: rp.realRet, vol: rp.vol,
     timestamp: Date.now(),
   };
 }
 
-// Inflation assumption shared by the questionnaire snapshot sim, its levers,
-// and the slider default handed to the dashboard — keep these in lockstep.
+// Inflation assumed while the user is still in the questionnaire, before the
+// country card gets a chance to offer a local figure. This value no longer
+// affects the plan's real growth rate — RISK_PROFILES carries the real return
+// directly — so all it does now is set the nominal figure the user is shown and
+// the dashboard's inflation slider default. It cancels out of the projection:
+// populateSliders seeds sl-ret via nomFromReal(realRet, Q_INFLATION) and getP
+// divides straight back out, leaving realRet (bar ~0.02pp of slider rounding).
+// The one remaining exception is the legacy fallback in loadPhase1Data(), for
+// pre-2026-09-09 snapshots whose risk profile no longer resolves by name.
+// That is the point of the change: this constant used to be load-bearing.
 const Q_INFLATION = 2.5;
+
+// Nominal <-> real, exact inverses of each other and of getP()'s own conversion.
+// The single place that relationship is written down, so the risk cards, the
+// slider seeding and the country card cannot drift apart from the simulation.
+const nomFromReal = (real, inf) => ((1 + real/100) * (1 + inf/100) - 1) * 100;
+const realFromNom = (nom,  inf) => ((1 + nom/100)  / (1 + inf/100) - 1) * 100;
 
 function buildSimP(data, overrides={}, numSims=200) {
   return {
     currentNW:  data.currentNW,
-    ret:        (1 + data.nomRet/100) / (1 + Q_INFLATION/100) - 1,
+    // Straight through: the profile's figure is already real and already a median
+    // compounded rate, which is exactly what runSim/drawReturns expect. Note the
+    // absence of any division by an inflation assumption — that was the mismatch.
+    ret:        data.realRet / 100,
     vol:        data.vol / 100,
     expenses:   data.expenses,
     swr:4, currentAge:data.currentAge, retireAge:data.retireAge, lifeExp:data.lifeExp,
@@ -2339,10 +2438,20 @@ function computeSummary(data) {
   const retYr = BASE_YR + yrs;
 
   const base = prob;
+  // The next risk profile up, if there is one. RISK_PROFILES is ordered least to
+  // most aggressive, which is what makes indexing it like this valid.
+  const riskNames = Object.keys(RISK_PROFILES);
+  const ri        = riskNames.indexOf(data.riskProfile);
+  const nextRisk  = (ri >= 0 && ri < riskNames.length - 1)
+    ? {name: riskNames[ri+1], p: RISK_PROFILES[riskNames[ri+1]]} : null;
   const allLevers = [
     ...(data.annualSave > 0 ? [{label:'Save 25% more', desc:`+${fmtS(data.annualSave*0.25)}/yr in contributions`, delta: simProb(data,{londonSave:data.annualSave*1.25, shocks},n) - base}] : []),
     {label:'Spend 10% less',      desc:`${fmtS(data.expenses*0.9)}/yr in retirement`,        delta: simProb(data,{expenses:data.expenses*0.9, shocks},n)    - base},
-    ...(data.riskProfile !== 'Aggressive Growth' ? [{label:'More aggressive mix', desc:`${data.nomRet}% → ${(data.nomRet+1).toFixed(1)}% return`, delta: simProb(data,{ret:(1 + (data.nomRet+1)/100) / (1 + Q_INFLATION/100) - 1, shocks},n) - base}] : []),
+    // Step to the next real profile rather than inventing "+1pp of return" with
+    // volatility held constant. The genuine steps are +1.00 / +0.63 / +0.29pp of
+    // real return and each buys more volatility, so the old flat +1pp with vol
+    // unchanged overstated what moving up the risk ladder actually gets you.
+    ...(nextRisk ? [{label:'More aggressive mix', desc:`${data.riskProfile} → ${nextRisk.name}`, delta: simProb(data,{ret:nextRisk.p.realRet/100, vol:nextRisk.p.vol/100, shocks},n) - base}] : []),
     // Only offered when retiring 3 years later still leaves retirement years
     // inside the simulated horizon — otherwise the lever measures nothing.
     ...(data.retireAge + 3 < data.lifeExp ? [{label:'Work 3 more years', desc:`Retire at ${data.retireAge+3}`, delta: simProb(data,{retireAge:data.retireAge+3, shocks},n) - base}] : []),
@@ -2399,7 +2508,18 @@ function submitPhase1() {
 function loadPhase1Data() {
   try {
     const d = JSON.parse(localStorage.getItem('phase1Data'));
-    return (d && typeof d === 'object') ? d : null;
+    if (!d || typeof d !== 'object') return null;
+    // Migration: snapshots saved before 2026-09-09 carry `nomRet`, a NOMINAL
+    // return that callers divided by Q_INFLATION at read time. Without this a
+    // returning user's saved plan reads realRet as undefined and the whole
+    // projection comes out NaN. Prefer the current profile's calibrated figure
+    // where the saved profile name still resolves, since re-deriving from the old
+    // nominal number would import the very mismatch this change removes.
+    if (d.realRet === undefined && d.nomRet !== undefined) {
+      const rp = RISK_PROFILES[d.riskProfile];
+      d.realRet = rp ? rp.realRet : realFromNom(d.nomRet, Q_INFLATION);
+    }
+    return d;
   } catch(e) { return null; }
 }
 
@@ -2445,9 +2565,15 @@ function populateSliders(data) {
   setSlider('sl-nw',      data.currentNW);
   setSlider('sl-exp',     data.expenses);
   setSlider('sl-lon',     data.annualSave || 0);
-  setSlider('sl-ret',     data.nomRet);
   setSlider('sl-vol',     data.vol);
+  // Inflation FIRST, then derive the nominal return from it. sl-ret is a nominal
+  // input, so what goes into it must be the nominal equivalent of the profile's
+  // real return AT this inflation rate — swapping these two lines would seed the
+  // return against whatever inflation happened to be in the slider already.
+  // Rounded to the slider's own 0.1 step so the value is deterministic rather
+  // than left to the browser; that costs ~0.02pp of real return in the handoff.
   setSlider('sl-inf',     Q_INFLATION);
+  setSlider('sl-ret',     +nomFromReal(data.realRet, Q_INFLATION).toFixed(1));
   setSlider('sl-swr',     4.0);
 }
 
@@ -3300,7 +3426,22 @@ function p2ApplyCountryVal(kind, v) {
   const baseKey = kind === 'inf' ? 'baseInf' : 'baseLE';
   const appKey  = kind === 'inf' ? 'appliedInf' : 'appliedLE';
   if (d[baseKey] == null) d[baseKey] = +document.getElementById(id).value;
+  // Accepting a country's inflation must NOT change the plan's real growth rate.
+  // Nominal return and inflation belong to the same regime, so moving one has to
+  // move the other: capture the real return first, then restate the nominal
+  // return against the new inflation. Before this, a UK user clicking "Accept"
+  // on 2.0% was silently handed ~0.5pp/yr more real return and a far rosier
+  // projection — the single biggest source of the dashboard's over-optimism.
+  const keepReal = kind === 'inf'
+    ? realFromNom(+document.getElementById('sl-ret').value,
+                  +document.getElementById('sl-inf').value)
+    : null;
   setSlider(id, v);
+  if (keepReal !== null) {
+    if (d.baseRet == null) d.baseRet = +document.getElementById('sl-ret').value;
+    setSlider('sl-ret', +nomFromReal(keepReal, +document.getElementById('sl-inf').value).toFixed(1));
+    d.appliedRet = +document.getElementById('sl-ret').value;
+  }
   d[appKey] = +document.getElementById(id).value;
   saveP2State();
   renderP2();
@@ -3314,6 +3455,11 @@ function p2RevertCountry() {
     setSlider('sl-exp', d.baseExp);
   if (d.baseInf != null && d.appliedInf != null && +document.getElementById('sl-inf').value === d.appliedInf)
     setSlider('sl-inf', d.baseInf);
+  // The nominal return was moved with inflation, so it has to come back with it
+  // — otherwise reverting the country would restore the old inflation while
+  // leaving the restated return behind, changing the real rate after all.
+  if (d.baseRet != null && d.appliedRet != null && +document.getElementById('sl-ret').value === d.appliedRet)
+    setSlider('sl-ret', d.baseRet);
   if (d.baseLE != null && d.appliedLE != null && +document.getElementById('sl-lifeexp').value === d.appliedLE)
     setSlider('sl-lifeexp', d.baseLE);
   p2State.data['H'] = {};
